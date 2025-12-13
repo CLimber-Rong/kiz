@@ -36,9 +36,9 @@ public:
 namespace kiz {
 struct Position {
     // std::string file_path;
-    size_t lineno_start;
-    size_t lineno_end;
-    size_t colum_start;
-    size_t colum_end;
+    size_t lno_start;
+    size_t lno_end;
+    size_t col_start;
+    size_t col_end;
 };
 }
