@@ -1,3 +1,6 @@
+#include <chrono>
+#include <cstdint>
+
 namespace builtins {
 
 model::Object* print(model::Object* self, const model::List* args) {
@@ -49,8 +52,10 @@ model::Object* cmd(model::Object* self, const model::List* args) {
 };
 
 model::Object* now(model::Object* self, const model::List* args) {
-    // todo
-    return new Nil();
+    using namespace std::chrono;
+    auto now = high_resolution_clock::now().time_since_epoch();
+    int64_t time = duration_cast<nanoseconds>(now).count();
+    return new model::Int( deps::BigInt(std::to_string(time) );
 };
 
 model::Object* setattr(model::Object* self, const model::List* args) {
