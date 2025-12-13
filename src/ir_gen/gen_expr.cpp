@@ -113,23 +113,6 @@ void IRGenerator::gen_expr(Expression* expr) {
                 );
             break;
         }
-        case AstType::SetMemberExpr: {
-            // 设置成员：生成对象表达式 -> 生成值表达式 -> 加载属性名 -> SET_ATTR指令
-            const auto* set_mem = dynamic_cast<SetMemberExpr*>(expr);
-            const auto* get_mem = dynamic_cast<GetMemberExpr*>(set_mem->g_mem.get());
-            assert(get_mem != nullptr);
-            gen_expr(get_mem->father.get()); // 生成对象IR
-            gen_expr(set_mem->val.get());   // 生成值IR
-
-            size_t name_idx = get_or_add_name(curr_names, get_mem);
-            curr_code_list.emplace_back(
-            Opcode::SET_ATTR,
-                std::vector<size_t>{name_idx},
-                expr->start_ln,
-                expr->end_ln
-            );
-            break;
-        }
         case AstType::FuncDeclExpr: {
             // 匿名函数：同普通函数声明，生成函数对象后加载
             auto* lambda = dynamic_cast<FnDeclExpr*>(expr);
@@ -248,7 +231,7 @@ void IRGenerator::gen_fn_call(CallExpr* call_expr) {
         gen_expr(member_expr->father.get()); 
 
         // 获取方法名的字符串常量池索引
-        const std::string& method_name = member_expr->child;
+        const std::string& method_name = member_expr->child->name;
         size_t method_name_idx = get_or_add_name(curr_names, method_name); 
 
         // 生成 CALL_METHOD 指令：操作数为 方法名索引 + 参数个数（用于校验）

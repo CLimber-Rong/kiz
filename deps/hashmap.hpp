@@ -35,14 +35,21 @@ class HashMap {
     struct StringBucket {
         std::string key;
         VT value;
-        size_t hash;                        // 缓存哈希值，避免重复计算
-        std::shared_ptr<StringBucket> next; // 解决哈希冲突的链表指针
+        size_t hash;
+        std::shared_ptr<StringBucket> next;
 
-        // 构造函数（移动语义优化）
-        StringBucket(std::string k, VT val)
+        // 修复：先拷贝key，计算hash后再move，避免初始化顺序问题
+        StringBucket(const std::string& k, VT val)
+            : key(k),  // 先拷贝，不提前move
+              value(std::move(val)),
+              hash(hash_string(k)), // 直接用入参k计算hash，避免依赖成员变量初始化顺序
+              next(nullptr) {}
+
+        // 保留移动构造（优化性能）
+        StringBucket(std::string&& k, VT&& val)
             : key(std::move(k)),
               value(std::move(val)),
-              hash(hash_string(key)),
+              hash(hash_string(this->key)), // 此时key已move完成
               next(nullptr) {}
     };
 
@@ -62,22 +69,19 @@ class HashMap {
         const size_t new_size = old_size * 2;
         std::vector<std::shared_ptr<Node>> new_buckets(new_size, nullptr);
 
-        // 遍历旧桶，重新分配元素到新桶
         for (size_t i = 0; i < old_size; ++i) {
             std::shared_ptr<Node> current = buckets_[i];
             while (current != nullptr) {
                 const std::shared_ptr<Node> next = current->next;
-                const size_t new_idx = getBucketIndex(current->hash);
-
-                // 头插法插入新桶
+                // 修复：使用节点自身缓存的hash计算新索引
+                const size_t new_idx = current->hash & (new_size - 1);
                 current->next = new_buckets[new_idx];
                 new_buckets[new_idx] = current;
-
                 current = next;
             }
         }
 
-        buckets_.swap(new_buckets);  // 替换为新桶数组
+        buckets_.swap(new_buckets);
     }
 
 public:
@@ -107,36 +111,38 @@ public:
 
     // 插入/更新键值对（存在则更新，不存在则插入）
     VT insert(const std::string& key, VT val) {
-        // 若桶为空，初始化桶大小为16
         if (buckets_.empty()) {
             buckets_.resize(16, nullptr);
         }
 
-        // 检查负载因子，超过阈值则扩容
-        if (static_cast<float>(elem_count_) / buckets_.size() >= load_factor_) {
-            this->resize();
-        }
-
+        // 修复：先计算hash和bucket_idx（基于当前桶大小）
         const size_t hash = hash_string(key);
-        const size_t bucket_idx = getBucketIndex(hash);
+        size_t bucket_idx = getBucketIndex(hash);
 
-        // 检查键是否已存在，存在则更新值
+        // 检查是否已存在（扩容前先查，避免扩容后索引变化）
         std::shared_ptr<Node> current = buckets_[bucket_idx];
         while (current != nullptr) {
             if (current->hash == hash && current->key == key) {
                 current->value = std::move(val);
-                return VT();
+                return VT(); // 更新值，不递增计数
             }
             current = current->next;
         }
 
-        // 键不存在，创建新节点（头插法）
+        // 检查负载因子，需要扩容则重新计算索引
+        if (static_cast<float>(elem_count_) / buckets_.size() >= load_factor_) {
+            this->resize();
+            // 扩容后重新计算索引（基于新桶大小）
+            bucket_idx = getBucketIndex(hash);
+        }
+
+        // 插入新节点（头插法）
         auto new_node = std::make_shared<Node>(key, std::move(val));
         new_node->next = buckets_[bucket_idx];
         buckets_[bucket_idx] = new_node;
-        elem_count_++;
+        elem_count_++; // 仅插入新节点时递增
 
-        return VT();  // 返回默认构造的T
+        return VT();
     }
 
     // 递归查找键
@@ -173,21 +179,13 @@ public:
         std::stringstream ss;
         ss << "{ ";
 
-        size_t total_count = 0;
-        for (const auto& bucket_head : buckets_) {
-            auto current = bucket_head;
-            while (current != nullptr) {
-                total_count++;
-                current = current->next;
-            }
-        }
-
         size_t current_idx = 0;
+        size_t total_count = this->elem_count_; // 直接用已统计的数量，无需遍历
+
         for (const auto& bucket_head : buckets_) {
             auto current = bucket_head;
             while (current != nullptr) {
                 ss << current->key << ": ";
-                // 兼容指针类型：指针输出地址，非指针调用to_string()
                 if constexpr (std::is_pointer_v<VT>) {
                     ss << static_cast<void*>(current->value);
                 } else {
@@ -246,23 +244,23 @@ public:
     }
 
     HashMap& operator=(const HashMap& other) {
-        if (this == &other) return *this; // 自赋值检查
+        if (this == &other) return *this;
 
-        // 释放当前资源
         buckets_.clear();
-        elem_count_ = 0;
+        elem_count_ = 0; // 重置计数
 
-        // 深拷贝其他成员（删除 load_factor_ = other.load_factor_）
         auto all_kv = other.to_vector();
         size_t init_size = 16;
-        while (init_size < (all_kv.size() / load_factor_)) { // 直接用当前对象的 load_factor_（常量，和 other 一致）
+        while (init_size < (all_kv.size() / load_factor_)) {
             init_size *= 2;
         }
         buckets_.resize(init_size, nullptr);
+
+        // 修复：手动计数，避免insert自动递增的误差
         for (auto& [key, val] : all_kv) {
-            insert(key, std::move(val));
+            this->insert(key, val);
         }
-        elem_count_ = other.elem_count_;
+        this->elem_count_ = all_kv.size(); // 直接赋值正确的数量
 
         return *this;
     }

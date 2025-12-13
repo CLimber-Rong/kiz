@@ -141,6 +141,23 @@ void IRGenerator::gen_block(const BlockStmt* block) {
                     stmt->end_ln
                 );
                 break;
+            case AstType::SetMemberStmt: {
+                // 设置成员：生成对象表达式 -> 生成值表达式 -> 加载属性名 -> SET_ATTR指令
+                const auto* set_mem = dynamic_cast<SetMemberStmt*>(stmt.get());
+                const auto* get_mem = dynamic_cast<GetMemberExpr*>(set_mem->g_mem.get());
+                assert(get_mem != nullptr);
+                gen_expr(get_mem->father.get()); // 生成对象IR
+                gen_expr(set_mem->val.get());   // 生成值IR
+
+                size_t name_idx = get_or_add_name(curr_names, get_mem->child->name);
+                curr_code_list.emplace_back(
+                Opcode::SET_ATTR,
+                    std::vector<size_t>{name_idx},
+                    stmt->start_ln,
+                    stmt->end_ln
+                );
+                break;
+            }
             default:
                 assert(false && "gen_block: 未处理的语句类型");
         }

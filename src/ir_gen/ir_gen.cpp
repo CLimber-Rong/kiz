@@ -13,6 +13,7 @@
 #include <cassert>
 
 #include "kiz.hpp"
+#include "opcode.hpp"
 
 namespace kiz {
 

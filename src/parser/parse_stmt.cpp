@@ -245,10 +245,10 @@ std::unique_ptr<Statement> Parser::parse_stmt() {
             auto value = parse_expression();
             skip_end_of_ln();
 
-            auto set_mem = std::make_unique<SetMemberExpr>(std::move(expr), std::move(value));
-            return std::make_unique<ExprStmt>(std::move(set_mem));
+            auto set_mem = std::make_unique<SetMemberStmt>(std::move(expr), std::move(value));
+            return set_mem;
         }
-        //非成员访问表达式后不能跟 =
+        // 非成员访问表达式后不能跟 =
         assert("invalid assignment target: expected member access");
     }
     if (expr != nullptr) {

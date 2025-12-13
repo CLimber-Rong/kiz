@@ -19,11 +19,12 @@ enum class AstType {
     StringExpr, NumberExpr, ListExpr, IdentifierExpr,
     BinaryExpr, UnaryExpr,
     CallExpr,
-    GetMemberExpr, SetMemberExpr, GetItemExpr, SetItemExpr,
+    GetMemberExpr, GetItemExpr,
     FuncDeclExpr, DictDeclExpr,
 
     // 语句类型（对应 Statement 子类）
     AssignStmt, NonlocalAssignStmt, GlobalAssignStmt,
+    SetMemberStmt, SetItemStmt,
     BlockStmt, IfStmt, WhileStmt,
     ReturnStmt, ImportStmt,
     NullStmt, ExprStmt,
@@ -194,6 +195,16 @@ struct WhileStmt final :  Statement {
     }
 };
 
+// 设置成员
+struct SetMemberStmt final :  Statement {
+    std::unique_ptr<Expression> g_mem;
+    std::unique_ptr<Expression> val;
+    SetMemberStmt(std::unique_ptr<Expression> g_mem, std::unique_ptr<Expression> val)
+        : g_mem(std::move(g_mem)), val(std::move(val)) {
+        this->ast_type = AstType::SetMemberStmt;
+    }
+};
+
 // 函数调用
 struct CallExpr final :  Expression {
     std::unique_ptr<Expression> callee;
@@ -213,17 +224,6 @@ struct GetMemberExpr final :  Expression {
         : father(std::move(f)), child(std::move(c)) {
         this->ast_type = AstType::GetMemberExpr;
         this->type_info = std::make_unique<TypeInfo>("get_member_expr");
-    }
-};
-
-// 设置成员
-struct SetMemberExpr final :  Expression {
-    std::unique_ptr<Expression> g_mem;
-    std::unique_ptr<Expression> val;
-    SetMemberExpr(std::unique_ptr<Expression> g_mem, std::unique_ptr<Expression> val)
-        : g_mem(std::move(g_mem)), val(std::move(val)) {
-        this->ast_type = AstType::SetMemberExpr;
-        this->type_info = std::make_unique<TypeInfo>("set_member_expr");
     }
 };
 

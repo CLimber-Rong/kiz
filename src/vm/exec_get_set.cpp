@@ -36,6 +36,8 @@ void Vm::exec_LOAD_VAR(const Instruction& instruction) {
     const auto var_it = curr_frame->locals.find(var_name);
 
     if (var_it == nullptr) {
+        DEBUG_OUTPUT("current builtins: " + builtins.to_string());
+        DEBUG_OUTPUT("var_name="+var_name);
         if (auto builtin_it = builtins.find(var_name)) {
             model::Object* builtin_val = builtin_it->value;
             builtin_val->make_ref();

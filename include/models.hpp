@@ -52,6 +52,10 @@ public:
         return ObjectType::OT_Object;
     }
 
+    [[nodiscard]] size_t get_refc_() const {
+        return refc_;
+    }
+
     void make_ref() {
         refc_.fetch_add(1, std::memory_order_relaxed);
     }

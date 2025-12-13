@@ -32,12 +32,12 @@ std::string Vm::file_path;
 Vm::Vm(const std::string& file_path_) {
     file_path = file_path_;
     DEBUG_OUTPUT("registering builtin functions...");
-    builtin::register_builtin_functions();
-#define KIZ_FUNC(n) builtins.insert(#n, new model::CppFunction(builtin::n))
-    KIZ_FUNC(print);
-    KIZ_FUNC(input);
-    KIZ_FUNC(isinstance);
-#undef KIZ_FUNC
+    builtins.insert("print", new model::CppFunction(builtin::print));
+    builtins.insert("input", new model::CppFunction(builtin::input));
+    builtins.insert("isinstance", new model::CppFunction(builtin::isinstance));
+    builtins.insert("create", new model::CppFunction(builtin::create));
+    builtins.insert("now", new model::CppFunction(builtin::now));
+    builtins.insert("getrefc", new model::CppFunction(builtin::getrefc));
 
     DEBUG_OUTPUT("registering builtin objects...");
     builtins.insert("obj", model::based_obj);
@@ -111,6 +111,7 @@ Vm::Vm(const std::string& file_path_) {
     builtins.insert("str", model::based_str);
     builtins.insert("function", model::based_function);
     builtins.insert("nil", model::based_nil);
+    DEBUG_OUTPUT("current builtins: " + builtins.to_string());
 }
 
 void Vm::load(model::Module* src_module) {
@@ -121,15 +122,12 @@ void Vm::load(model::Module* src_module) {
     // 注册为main module
     main_module = src_module;
 
-    // 加载常量池：处理引用计数，避免常量对象被提前释放
-    const std::vector<model::Object*>& module_consts = src_module->code->consts;
-
     // 创建模块级调用帧（CallFrame）：模块是顶层执行单元，对应一个顶层调用帧
     auto module_call_frame = std::make_unique<CallFrame>();
-    module_call_frame->is_week_scope = false;          // 模块作用域为"强作用域"（非弱作用域）
+    module_call_frame->is_week_scope = false;          // 模块作用域为"强作用域"
     module_call_frame->locals = deps::HashMap<model::Object*>(); // 初始空局部变量表
     module_call_frame->pc = 0;                         // 程序计数器初始化为0（从第一条指令开始执行）
-    module_call_frame->return_to_pc = module_call_frame->code_object->code.size(); // 执行完所有指令后返回的位置（指令池末尾）
+    module_call_frame->return_to_pc = src_module->code->code.size(); // 执行完所有指令后返回的位置（指令池末尾）
     module_call_frame->name = src_module->name;        // 调用帧名称与模块名一致（便于调试）
     module_call_frame->code_object = src_module->code; // 关联当前模块的CodeObject
     module_call_frame->curr_lineno_map = src_module->code->lineno_map; // 复制行号映射（用于错误定位）
@@ -139,6 +137,7 @@ void Vm::load(model::Module* src_module) {
     call_stack_.emplace_back(std::move(module_call_frame));
 
     // 初始化VM执行状态：标记为"就绪"
+    DEBUG_OUTPUT("start running");
     running_ = true; // 标记VM为运行状态（等待exec触发执行）
     assert(!call_stack_.empty() && "Vm::load: 调用栈为空，无法执行指令");
     auto& module_frame = *call_stack_.back(); // 获取当前模块的调用帧（栈顶）
@@ -174,7 +173,7 @@ void Vm::load(model::Module* src_module) {
         }
     }
 
-    DEBUG_OUTPUT("call stack length: " + std::to_string(this->call_stack_.size()));
+    DEBUG_OUTPUT("call stack length: " + std::to_string(call_stack_.size()));
 }
 
 model::Object* Vm::get_return_val() {
@@ -184,7 +183,7 @@ model::Object* Vm::get_return_val() {
 
 void Vm::extend_code(const model::CodeObject* code_object) {
     DEBUG_OUTPUT("exec extend_code (覆盖模式)...");
-    DEBUG_OUTPUT("call stack length: " + std::to_string(this->call_stack_.size()));
+    DEBUG_OUTPUT("call stack length: " + std::to_string(call_stack_.size()));
 
     // 合法性校验
     assert(code_object != nullptr && "Vm::extend_code: 传入的 code_object 不能为 nullptr");
@@ -202,12 +201,14 @@ void Vm::extend_code(const model::CodeObject* code_object) {
             old_const->del_ref();
         }
     }
+    global_code_obj.consts.clear();
+    global_code_obj.consts = code_object->consts;
+    curr_frame.code_object->consts = code_object->consts;
 
     // ========== 覆盖：名称表 ==========
     const size_t prev_name_count = global_code_obj.names.size();
     global_code_obj.names.clear();
     global_code_obj.names = code_object->names; // 覆盖 CodeObject 的 names
-    // 同步更新 CallFrame 的 names（关键！之前缺失这一步）
     curr_frame.names = global_code_obj.names;
     DEBUG_OUTPUT("extend_code: 覆盖名称表：原有 "
         + std::to_string(prev_name_count)
@@ -218,8 +219,7 @@ void Vm::extend_code(const model::CodeObject* code_object) {
 
     // ========== 覆盖：行号映射 ==========
     global_code_obj.lineno_map.clear();
-    global_code_obj.lineno_map = code_object->lineno_map; // 覆盖 CodeObject 的 lineno_map
-    // 同步更新 CallFrame 的 curr_lineno_map（关键！避免行号映射错误）
+    global_code_obj.lineno_map = code_object->lineno_map;
     curr_frame.curr_lineno_map = global_code_obj.lineno_map;
     DEBUG_OUTPUT("extend_code: 覆盖行号映射：新 "
         + std::to_string(global_code_obj.lineno_map.size())
