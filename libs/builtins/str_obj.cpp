@@ -2,8 +2,8 @@
 
 namespace model {
 
-// String.add：字符串拼接（self + 传入String，返回新String，不修改原对象）
-inline auto str_add = [](Object* self, const List* args) -> Object* {
+// String.__add__：字符串拼接（self + 传入String，返回新String，不修改原对象）
+model::Object* str_add(model::Object* self, const model::List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (str_add)");
     assert(args->val.size() == 1 && "function String.add need 1 arg");
     
@@ -17,8 +17,8 @@ inline auto str_add = [](Object* self, const List* args) -> Object* {
     return new String(self_str->val + another_str->val);
 };
 
-// String.mul：字符串重复n次（self * n，返回新String，n为非负整数）
-inline auto str_mul = [](Object* self, const List* args) -> Object* {
+// String.__mul__：字符串重复n次（self * n，返回新String，n为非负整数）
+model::Object* str_mul(model::Object* self, const model::List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (str_mul)");
     assert(args->val.size() == 1 && "function String.mul need 1 arg");
     
@@ -38,8 +38,8 @@ inline auto str_mul = [](Object* self, const List* args) -> Object* {
     return new String(std::move(result));
 };
 
-// String.eq：判断两个字符串是否相等 self == x
-inline auto str_eq = [](Object* self, const List* args) -> Object* {
+// String.__eq__：判断两个字符串是否相等 self == x
+model::Object* str_eq(model::Object* self, const model::List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (str_eq)");
     assert(args->val.size() == 1 && "function String.eq need 1 arg");
     
@@ -52,8 +52,8 @@ inline auto str_eq = [](Object* self, const List* args) -> Object* {
     return new Bool(self_str->val == another_str->val);
 };
 
-// String.contains：判断是否包含子字符串 x in self
-inline auto str_contains = [](Object* self, const List* args) -> Object* {
+// String.__contains__：判断是否包含子字符串 x in self
+model::Object* str_contains(model::Object* self, const model::List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (str_contains)");
     assert(args->val.size() == 1 && "function String.contains need 1 arg");
     
