@@ -6,6 +6,17 @@
 
 namespace kiz {
 
+bool Vm::check_obj_is_true(model::Object* obj) {
+    if (auto bool_obj = dynamic_cast<const model::Bool*>(obj)) {
+        return bool_obj->val==true ? true : false;
+    }
+
+    call_function(get_attr(obj, "__bool__"), new model::List({}), obj);
+    auto result = get_return_val();
+    return check_obj_is_true(result);
+}
+
+
 void Vm::call_function(model::Object* func_obj, model::Object* args_obj, model::Object* self=nullptr){
     auto* args_list = dynamic_cast<model::List*>(args_obj);
 
@@ -173,15 +184,6 @@ void Vm::exec_CALL_METHOD(const Instruction& instruction) {
     call_function(func_obj, args_obj, obj);
 
 }
-
-bool Vm::check_obj_is_true(model::Object* obj) {
-    if (auto bool_obj = dynamic_cast<const model::Bool*>(obj)) {
-        return bool_obj->val==true ? true : false;
-    }
-
-    return call_function(get_attr(obj, "__bool__"), new model::List({}), obj);
-}
-
 
 void Vm::exec_RET(const Instruction& instruction) {
     DEBUG_OUTPUT("exec ret...");
