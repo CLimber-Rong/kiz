@@ -24,13 +24,14 @@ True Nil False
     - ~~**feature** 实现setattr~~
     - ~~**feature** 实现call method~~
     - ~~**feature** 完成 and not or in运算符(在vm中要支持判断model::Bool, 如果对象不是model::Bool, 需尝试调用Object.__bool__魔术方法)~~
+    - ~~**fix[急需的]** if, while 语句的跳转问题~~
+    -- ~~**feature[急需的]** 实现oop支持~~
 
     **近期的**
     - **feature[急需的]** 添加支持TraceBack的报错器
     - **feature[急需的]** 实现完整oop语法(语句用法见examples/oop.kiz)
     - **feature[急需的]** 通过kiz::Position(已经在kiz.hpp定义了这个结构体)这个结构体来储存token, ast, instruction的位置信息
-    - **fix[急需的]** if, while 语句的跳转问题
-    - **fix[急需的]** 测试注释功能
+    - **fix[急需的]** 完成注释功能
     - **fix[急需的]** 测试nonlocal和global语句(语句用法见examples/onestop.kiz)
 
     - **feature[急需的]** 完成所有builtin函数
