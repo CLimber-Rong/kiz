@@ -1,6 +1,6 @@
-a=False
-if a
-    print(1)
-else
-    print(0)
+fn x()
+    x.y = 0
 end
+
+x()
+print(x.y)

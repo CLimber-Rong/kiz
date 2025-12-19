@@ -24,20 +24,20 @@ void Vm::exec_LOAD_VAR(const Instruction& instruction) {
     }
 
     size_t name_idx = instruction.opn_list[0];
-    std::string var_name;
+    std::string var_name = call_stack_.back()->names[name_idx];
     
     // 遍历调用栈
-    assert(call_stack_ != nullptr);
-    model::Object* var_it;
+    std::shared_ptr<deps::HashMap<model::Object*>::Node> var_it;
+    assert(!call_stack_.empty());
     for (auto frame_it = call_stack_.rbegin(); frame_it != call_stack_.rend(); ++frame_it) {
-        CallFrame* curr_frame = (*frame_it).get();
-        
-        var_name = curr_frame->names[name_idx];
+        const CallFrame* curr_frame = (*frame_it).get();
+
+        DEBUG_OUTPUT(var_name);
         var_it = curr_frame->locals.find(var_name);
         if (var_it) break;
     }
 
-    if (var == nullptr) {
+    if (var_it == nullptr) {
         DEBUG_OUTPUT("try to find in builtins (getting var name)");
         var_name = call_stack_.back().get()-> names[name_idx];
         DEBUG_OUTPUT("current builtins: " + builtins.to_string());
@@ -50,7 +50,9 @@ void Vm::exec_LOAD_VAR(const Instruction& instruction) {
         }
         assert(false && "LOAD_VAR: 局部变量未定义");
     }
+
     model::Object* var_val = var_it->value;
+    DEBUG_OUTPUT("load var: " + var_name + " = " + var_val->to_string());
     var_val->make_ref();
     op_stack_.push(var_val);
     DEBUG_OUTPUT("ok to exec load_var...");

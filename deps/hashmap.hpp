@@ -31,6 +31,7 @@ inline size_t hash_string(const std::string& key) {
 // 模板类：键为std::string，值为任意类型T的HashMap
 template <typename VT>
 class HashMap {
+public:
     // 嵌套桶节点结构体（存储键值对、哈希值、链表指针）
     struct StringBucket {
         std::string key;
@@ -84,7 +85,6 @@ class HashMap {
         buckets_.swap(new_buckets);
     }
 
-public:
     // 默认构造函数（初始桶大小为16，2的幂）
     explicit HashMap() {
         constexpr size_t init_size = 16;

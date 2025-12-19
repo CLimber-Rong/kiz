@@ -102,11 +102,6 @@ std::unique_ptr<IfStmt> Parser::parse_if() {
         }
     }
 
-    // 消耗整个if-else的end（仅当存在else或直接结束时）
-    if (curr_token().type == TokenType::End) {
-        skip_token("end");
-    }
-
     return std::make_unique<IfStmt>(std::move(cond_expr), std::move(if_block), std::move(else_block));
 }
 
