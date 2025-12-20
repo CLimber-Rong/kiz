@@ -2,6 +2,23 @@
 
 namespace model {
 
+// String.__call__
+model::Object* str_call(model::Object* self, const model::List* args) {
+    std::string val = 
+        args.empty()
+        ? ""
+        : get_one_arg()->to_string;
+
+    return new model::String(val);
+}
+
+// String.__bool__
+model::Object* str_bool(model::Object* self, const model::List* args) {
+    const auto self_int = dynamic_cast<String*>(self);
+    if (self_int->val.empty()) return new model::Bool(false);
+    return new model::Bool(true);
+}
+
 // String.__add__：字符串拼接（self + 传入String，返回新String，不修改原对象）
 model::Object* str_add(model::Object* self, const model::List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (str_add)");
