@@ -24,21 +24,11 @@
 #include <exception>
 #include <string>
 
-class KizStopExecSignal final : public std::runtime_error {
+class KizStopRunningSignal final : public std::runtime_error {
 public:
-    KizStopExecSignal() noexcept
+    KizStopRunningSignal() noexcept
         : std::runtime_error("kiz-lang 执行终止信号") {}
 
-    explicit KizStopExecSignal(const std::string& msg) noexcept
+    explicit KizStopRunningSignal(const std::string& msg) noexcept
         : std::runtime_error(msg) {}
 };
-
-namespace kiz {
-struct Position {
-    // std::string file_path;
-    size_t lno_start;
-    size_t lno_end;
-    size_t col_start;
-    size_t col_end;
-};
-}
