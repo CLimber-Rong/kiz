@@ -3,6 +3,22 @@
 
 namespace model {
 
+// Int.__call__
+model::Object* int_call(model::Object* self, const model::List* args) {
+    auto a = get_one_arg();
+    deps::BigInt val(0);
+    if (dynamic_cast<String*>(a)) val = deps::Bigint(a->val);
+    else if (!kiz::Vm::check_is_true(a)) val = deps::Bigint(0);
+    return new model::Int(val);
+}
+
+// Int.__bool__
+model::Object* int_bool(model::Object* self, const model::List* args) {
+    const auto self_int = dynamic_cast<Int*>(self);
+    if (self_int->val == deps::BigInt(0)) return new model::Bool(false);
+    return new model::Bool(true);
+}
+
 // Int.__add__ 整数加法：self + args[0]
 model::Object* int_add(model::Object* self, const model::List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments");
