@@ -11,36 +11,8 @@
 
 namespace kiz {
 
-// 专门解析if的语句块（不以end结尾，以else/elif/end/EOF为终止）
-std::unique_ptr<BlockStmt> Parser::parse_if_block() {
-    DEBUG_OUTPUT("parsing if block (no end)");
-    std::vector<std::unique_ptr<Statement>> block_stmts;
-
-    while (curr_tok_idx_ < tokens_.size()) {
-        const Token& curr_tok = curr_token();
-
-        // 终止条件：遇到else/end/EOF → 停止解析（不消耗Token）
-        if (curr_tok.type == TokenType::Else||
-            curr_tok.type == TokenType::End || curr_tok.type == TokenType::EndOfFile) {
-            break;
-        }
-
-        // 解析单条语句并加入块
-        if (auto stmt = parse_stmt()) {
-            block_stmts.push_back(std::move(stmt));
-        }
-
-        // 跳过语句后的分号/换行（容错）
-        if (curr_token().type == TokenType::Semicolon || curr_token().type == TokenType::EndOfLine) {
-            skip_token();
-        }
-    }
-
-    return std::make_unique<BlockStmt>(std::move(block_stmts));
-}
-
 // 需要end结尾的块
-std::unique_ptr<BlockStmt> Parser::parse_block() {
+std::unique_ptr<BlockStmt> Parser::parse_block(TokenType endswith = TokenType::End) {
     DEBUG_OUTPUT("parsing block (with end)");
     std::vector<std::unique_ptr<Statement>> block_stmts;
 
@@ -50,26 +22,18 @@ std::unique_ptr<BlockStmt> Parser::parse_block() {
         if (curr_tok.type == TokenType::End) {
             break;
         }
+        if (curr_tok.type == endswith) {
+            break;
+        }
         if (curr_tok.type == TokenType::EndOfFile) {
-            std::cerr << Color::RED
-                      << "[Syntax Error] Block missing 'end' terminator (unexpected EOF)"
-                      << Color::RESET << std::endl;
             assert(false && "Block not terminated with 'end'");
         }
 
         if (auto stmt = parse_stmt()) {
             block_stmts.push_back(std::move(stmt));
         }
-
-        // 修复：同时跳过分号和换行（块内语句可能用换行分隔）
-        if (curr_token().type == TokenType::Semicolon) {
-            skip_token(";");
-        } else if (curr_token().type == TokenType::EndOfLine) {
-            skip_token(); // 直接跳过换行，无需指定文本
-        }
     }
 
-    skip_token("end"); // 现在能正确跳过 end Token
     return std::make_unique<BlockStmt>(std::move(block_stmts));
 }
 
@@ -78,16 +42,11 @@ std::unique_ptr<IfStmt> Parser::parse_if() {
     DEBUG_OUTPUT("parsing if");
     // 解析if条件表达式
     auto cond_expr = parse_expression();
-    if (!cond_expr) {
-        std::cerr << Color::RED
-                  << "[Syntax Error] If statement missing condition expression"
-                  << Color::RESET << std::endl;
-        assert(false && "Invalid if condition");
-    }
+    assert(cond_expr!=nullptr && "Invalid if condition");
 
     // 解析if体（无end的块）
     skip_start_of_block();
-    auto if_block = parse_if_block(); // 替换为parse_if_block，不消耗end
+    auto if_block = parse_block(TokenType::Else);
 
     // 处理else分支
     std::unique_ptr<BlockStmt> else_block = nullptr;
@@ -97,14 +56,18 @@ std::unique_ptr<IfStmt> Parser::parse_if() {
         if (curr_token().type == TokenType::If) {
             // else if分支
             std::vector<std::unique_ptr<Statement>> else_if_stmts;
+            skip_token("if");
             else_if_stmts.push_back(parse_if());
             else_block = std::make_unique<BlockStmt>(std::move(else_if_stmts));
         } else {
             // else分支（无end的块）
-            else_block = parse_if_block(); // 替换为parse_if_block
+            else_block = parse_block();
         }
     }
-    skip_token("end");
+
+    if (curr_token().type == TokenType::End) {
+        skip_token("end");
+    }
 
     return std::make_unique<IfStmt>(std::move(cond_expr), std::move(if_block), std::move(else_block));
 }
@@ -129,6 +92,7 @@ std::unique_ptr<Statement> Parser::parse_stmt() {
         assert(cond_expr != nullptr);
         skip_start_of_block();
         auto while_block = parse_block();
+        skip_token("end");
         return std::make_unique<WhileStmt>(std::move(cond_expr), std::move(while_block));
     }
 
@@ -158,6 +122,7 @@ std::unique_ptr<Statement> Parser::parse_stmt() {
         // 解析函数体（无大括号，用end结尾）
         skip_start_of_block();  // 跳过参数后的换行
         auto func_body = parse_block();
+        skip_token("end");
 
         // 生成函数定义语句节点
         return std::make_unique<AssignStmt>(func_name, std::make_unique<FnDeclExpr>(
