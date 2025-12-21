@@ -43,7 +43,7 @@ model::Object* help(model::Object* self, const model::List* args) {
 model::Object* breakpointer(model::Object* self, const model::List* args) {
     size_t i = 0;
     for (auto& frame: kiz::Vm::call_stack_) {
-        std::cout << "Frame [" << i << "]" << frame->name << "\n";
+        std::cout << "Frame [" << i << "] " << frame->name << "\n";
         std::cout << "=================================" << "\n";
         std::cout << "Pc: " << frame->pc << "\n";
         std::cout << "Locals: " << frame->locals.to_string() << "\n";
