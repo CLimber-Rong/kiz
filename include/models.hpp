@@ -20,6 +20,23 @@
 
 namespace model {
 
+namespace MagicName {
+    constexpr std::string Add = "__add__";
+    constexpr std::string Sub = "__sub__";
+    constexpr std::string Mul = "__mul__";
+    constexpr std::string Div = "__div__";
+    constexpr std::string Pow = "__pow__";
+    constexpr std::string Mod = "__mod__";
+    constexpr std::string Eq = "__eq__";
+    constexpr std::string Lt = "__lt__";
+    constexpr std::string Gt = "__gt__";
+    constexpr std::string Parent = "__parent__";
+    constexpr std::string Call = "__call__";
+    constexpr std::string Bool = "__bool__";
+    constexpr std::string Contains = "__contains__";
+    constexpr std::string OwnerModule = "__owner_module__";
+}
+
 // 工具函数ptr转为地址的字符串
 template <typename T>
 std::string ptr_to_string(T* m) {
