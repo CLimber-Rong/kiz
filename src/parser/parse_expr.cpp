@@ -20,10 +20,11 @@ std::unique_ptr<Expression> Parser::parse_and_or() {
     DEBUG_OUTPUT("parsing and/or expression...");
     auto node = parse_comparison();
     
-    while (curr_token().type == TokenType::And || curr_token().type == TokenType::Or) {
+    while (curr_token().type == TokenType::And or curr_token().type == TokenType::Or) {
         auto op_token = skip_token(curr_token().text);
         auto right = parse_comparison(); // 解析右侧比较表达式
         node = std::make_unique<BinaryExpr>(
+            curr_token().pos,
             std::move(op_token.text),
             std::move(node),
             std::move(right)
@@ -68,6 +69,7 @@ std::unique_ptr<Expression> Parser::parse_comparison() {
         }
         auto right = parse_add_sub();
         node = std::make_unique<BinaryExpr>(
+            curr_token().pos,
             std::move(op_text),
             std::move(node),
             std::move(right)
@@ -86,7 +88,7 @@ std::unique_ptr<Expression> Parser::parse_add_sub() {
         auto tok = curr_token();
         auto op = skip_token().text;
         auto right = parse_mul_div_mod();
-        node = std::make_unique<BinaryExpr>(std::move(op), std::move(node), std::move(right));
+        node = std::make_unique<BinaryExpr>(curr_token().pos, std::move(op), std::move(node), std::move(right));
     }
     return node;
 }
@@ -102,7 +104,7 @@ std::unique_ptr<Expression> Parser::parse_mul_div_mod() {
         auto tok = curr_token();
         auto op = skip_token().text;
         auto right = parse_power();
-        node = std::make_unique<BinaryExpr>(std::move(op), std::move(node), std::move(right));
+        node = std::make_unique<BinaryExpr>(curr_token().pos, std::move(op), std::move(node), std::move(right));
     }
     return node;
 }
@@ -114,7 +116,7 @@ std::unique_ptr<Expression> Parser::parse_power() {
         auto tok = curr_token();
         auto op = skip_token().text;
         auto right = parse_power();  // 右结合
-        node = std::make_unique<BinaryExpr>(std::move(op), std::move(node), std::move(right));
+        node = std::make_unique<BinaryExpr>(curr_token().pos, std::move(op), std::move(node), std::move(right));
     }
     return node;
 }
@@ -125,6 +127,7 @@ std::unique_ptr<Expression> Parser::parse_unary() {
         auto op_token = skip_token(); // 跳过 not
         auto operand = parse_unary(); // 右结合
         return std::make_unique<UnaryExpr>(
+            curr_token().pos,
             std::move(op_token.text),
             std::move(operand)
         );
@@ -132,7 +135,7 @@ std::unique_ptr<Expression> Parser::parse_unary() {
     if (curr_token().type == TokenType::Minus) {
         skip_token();
         auto operand = parse_unary();
-        return std::make_unique<UnaryExpr>("-", std::move(operand));
+        return std::make_unique<UnaryExpr>(curr_token().pos, "-", std::move(operand));
     }
     return parse_factor();
 }
@@ -144,21 +147,21 @@ std::unique_ptr<Expression> Parser::parse_factor() {
     while (true) {
         if (curr_token().type == TokenType::Dot) {
             skip_token(".");
-            auto child = std::make_unique<IdentifierExpr>(skip_token().text);
-            node = std::make_unique<GetMemberExpr>(std::move(node),std::move(child));
+            auto child = std::make_unique<IdentifierExpr>(curr_token().pos, skip_token().text);
+            node = std::make_unique<GetMemberExpr>(curr_token().pos, std::move(node),std::move(child));
 
         }
         else if (curr_token().type == TokenType::LBracket) {
             skip_token("[");
             auto param = parse_args(TokenType::RBracket);
             skip_token("]");
-            node = std::make_unique<GetItemExpr>(std::move(node),std::move(param));
+            node = std::make_unique<GetItemExpr>(curr_token().pos, std::move(node),std::move(param));
         }
         else if (curr_token().type == TokenType::LParen) {
             skip_token("(");
             auto param = parse_args(TokenType::RParen);
             skip_token(")");
-            node = std::make_unique<CallExpr>(std::move(node),std::move(param));
+            node = std::make_unique<CallExpr>(curr_token().pos, std::move(node),std::move(param));
         }
         else break;
     }
@@ -169,22 +172,22 @@ std::unique_ptr<Expression> Parser::parse_primary() {
     DEBUG_OUTPUT("parsing primary...");
     const auto tok = skip_token();
     if (tok.type == TokenType::Number) {
-        return std::make_unique<NumberExpr>(tok.text);
+        return std::make_unique<NumberExpr>(curr_token().pos, tok.text);
     }
     if (tok.type == TokenType::String) {
-        return std::make_unique<StringExpr>(tok.text);
+        return std::make_unique<StringExpr>(curr_token().pos, tok.text);
     }
     if (tok.type == TokenType::Nil) {
-        return std::make_unique<NilExpr>();
+        return std::make_unique<NilExpr>(curr_token().pos);
     }
     if (tok.type == TokenType::True) {
-        return std::make_unique<BoolExpr>(true);
+        return std::make_unique<BoolExpr>(curr_token().pos, true);
     }
     if (tok.type == TokenType::False) {
-        return std::make_unique<BoolExpr>(false);
+        return std::make_unique<BoolExpr>(curr_token().pos, false);
     }
     if (tok.type == TokenType::Identifier) {
-        return std::make_unique<IdentifierExpr>(tok.text);
+        return std::make_unique<IdentifierExpr>(curr_token().pos, tok.text);
     }
     if (tok.type == TokenType::Func) {
         // 解析参数列表（()包裹，逻辑不变）
@@ -207,7 +210,7 @@ std::unique_ptr<Expression> Parser::parse_primary() {
         skip_start_of_block();  // 跳过参数后的换行
         auto func_body = parse_block();
         skip_token("end");
-        return std::make_unique<FnDeclExpr>("<lambda>", std::move(func_params),std::move(func_body));
+        return std::make_unique<FnDeclExpr>(curr_token().pos, "<lambda>", std::move(func_params),std::move(func_body));
     }
     if (tok.type == TokenType::Pipe) {
         std::vector<std::string> params;
@@ -218,12 +221,13 @@ std::unique_ptr<Expression> Parser::parse_primary() {
         skip_token("|");
         auto expr = parse_expression();
         std::vector<std::unique_ptr<Statement>> stmts;
-        stmts.emplace_back(std::make_unique<ReturnStmt>(std::move(expr)));
+        stmts.emplace_back(std::make_unique<ReturnStmt>(curr_token().pos, std::move(expr)));
 
         return std::make_unique<FnDeclExpr>(
+            curr_token().pos,
             "lambda",
             std::move(params),
-            std::make_unique<BlockStmt>(std::move(stmts))
+            std::make_unique<BlockStmt>(curr_token().pos, std::move(stmts))
         );
     }
     if (tok.type == TokenType::LBrace) {
@@ -237,12 +241,12 @@ std::unique_ptr<Expression> Parser::parse_primary() {
             init_vec.emplace_back(std::move(key), std::move(val));
         }
         skip_token("}");
-        return std::make_unique<DictDeclExpr>("<lambda_dict>", std::move(init_vec));
+        return std::make_unique<DictDeclExpr>(curr_token().pos, "<lambda_dict>", std::move(init_vec));
     }
     if (tok.type == TokenType::LBracket) {
         auto param = parse_args(TokenType::RBracket);
         skip_token("]");
-        return std::make_unique<ListExpr>(std::move(param));
+        return std::make_unique<ListExpr>(curr_token().pos, std::move(param));
     }
     if (tok.type == TokenType::LParen) {
         auto expr = parse_expression();

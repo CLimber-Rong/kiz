@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "kiz.hpp"
-#include "util/error_reporter.hpp"
+#include "error/error_reporter.hpp"
 
 namespace model {
 class Object;
@@ -30,8 +30,8 @@ enum class Opcode;
 struct Instruction {
     Opcode opc;
     std::vector<size_t> opn_list;
-    util::PositionInfo pos{};
-    Instruction(Opcode o, std::vector<size_t> ol, util::PositionInfo& p) : opc(o), opn_list(std::move(ol)), pos(std::move(p)) {}
+    err::PositionInfo pos{};
+    Instruction(Opcode o, std::vector<size_t> ol, err::PositionInfo& p) : opc(o), opn_list(std::move(ol)), pos(std::move(p)) {}
 };
 
 struct CallFrame {
@@ -64,6 +64,8 @@ public:
     static model::Object* get_stack_top();
     static void exec(const Instruction& instruction);
     static model::Object* get_return_val();
+    static CallFrame* fetch_curr_callframe();
+    static model::Object* fetch_one_from_stack_top();
     static std::tuple<model::Object*, model::Object*> fetch_two_from_stack_top(const std::string& curr_instruction_name);
 
     static model::Object* get_attr(const model::Object* obj, const std::string& attr);

@@ -21,25 +21,25 @@
 namespace model {
 
 namespace MagicName {
-    inline constexpr std::string Add = "__add__";
-    inline constexpr std::string Sub = "__sub__";
-    inline constexpr std::string Mul = "__mul__";
-    inline constexpr std::string Div = "__div__";
-    inline constexpr std::string Pow = "__pow__";
-    inline constexpr std::string Mod = "__mod__";
-    inline constexpr std::string Eq = "__eq__";
-    inline constexpr std::string Lt = "__lt__";
-    inline constexpr std::string Gt = "__gt__";
-    inline constexpr std::string Parent = "__parent__";
-    inline constexpr std::string Call = "__call__";
-    inline constexpr std::string Bool = "__bool__";
-    inline constexpr std::string Str = "__str__";
-    inline constexpr std::string DebugStr = "__dstr__";
-    inline constexpr std::string GetItem = "__getitem__";
-    inline constexpr std::string SetItem = "__setitem__";
-    inline constexpr std::string Contains = "__contains__";
-    inline constexpr std::string NextItem = "__next__";
-    inline constexpr std::string OwnerModule = "__owner_module__";
+    inline std::string Add = "__add__";
+    inline std::string Sub = "__sub__";
+    inline std::string Mul = "__mul__";
+    inline std::string Div = "__div__";
+    inline std::string Pow = "__pow__";
+    inline std::string Mod = "__mod__";
+    inline std::string Eq = "__eq__";
+    inline std::string Lt = "__lt__";
+    inline std::string Gt = "__gt__";
+    inline std::string Parent = "__parent__";
+    inline std::string Call = "__call__";
+    inline std::string Bool = "__bool__";
+    inline std::string Str = "__str__";
+    inline std::string DebugStr = "__dstr__";
+    inline std::string GetItem = "__getitem__";
+    inline std::string SetItem = "__setitem__";
+    inline std::string Contains = "__contains__";
+    inline std::string NextItem = "__next__";
+    inline std::string OwnerModule = "__owner_module__";
 }
 
 // 工具函数ptr转为地址的字符串

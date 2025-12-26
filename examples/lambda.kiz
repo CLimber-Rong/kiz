@@ -1,0 +1,9 @@
+a = |m| m+1
+
+print(a(1))
+
+b = fn (b)
+    print(b)
+end
+
+b(3)

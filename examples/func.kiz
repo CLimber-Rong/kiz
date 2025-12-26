@@ -1,0 +1,16 @@
+n = 0
+fn a
+    m = 0
+    fn b
+        fn c
+            nonlocal m = 100
+            global n = 99
+        end
+        c()
+    end
+    b()
+    print(m)
+end
+a()
+
+print(n)

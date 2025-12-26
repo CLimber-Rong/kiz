@@ -43,7 +43,8 @@ void IRGenerator::gen_block(const BlockStmt* block) {
 
                 curr_code_list.emplace_back(
                     Opcode::SET_LOCAL,
-                    std::vector<size_t>{name_idx}
+                    std::vector<size_t>{name_idx},
+                    stmt->pos
                 );
                 break;
             }
@@ -55,7 +56,8 @@ void IRGenerator::gen_block(const BlockStmt* block) {
 
                 curr_code_list.emplace_back(
                     Opcode::SET_NONLOCAL,
-                    std::vector<size_t>{name_idx}
+                    std::vector<size_t>{name_idx},
+                    stmt->pos
                 );
                 break;
             }
@@ -68,7 +70,8 @@ void IRGenerator::gen_block(const BlockStmt* block) {
 
                 curr_code_list.emplace_back(
                     Opcode::SET_GLOBAL,
-                    std::vector<size_t>{name_idx}
+                    std::vector<size_t>{name_idx},
+                    stmt->pos
                 );
                 break;
             }
@@ -101,12 +104,14 @@ void IRGenerator::gen_block(const BlockStmt* block) {
                     const size_t const_idx = get_or_add_const(curr_consts, nil);
                     curr_code_list.emplace_back(
                         Opcode::LOAD_CONST,
-                        std::vector<size_t>{const_idx}
+                        std::vector<size_t>{const_idx},
+                        stmt->pos
                     );
                 }
                 curr_code_list.emplace_back(
                     Opcode::RET,
-                    std::vector<size_t>{}
+                    std::vector<size_t>{},
+                    stmt->pos
                 );
                 break;
             }
@@ -115,7 +120,8 @@ void IRGenerator::gen_block(const BlockStmt* block) {
                 block_stack.top().break_pos.push_back(curr_code_list.size());
                 curr_code_list.emplace_back(
                     Opcode::JUMP,
-                    std::vector<size_t>{0}
+                    std::vector<size_t>{0},
+                    stmt->pos
                 );
                 break;
             }
@@ -124,7 +130,8 @@ void IRGenerator::gen_block(const BlockStmt* block) {
                 block_stack.top().continue_pos.push_back(curr_code_list.size());
                 curr_code_list.emplace_back(
                     Opcode::JUMP,
-                    std::vector<size_t>{0}
+                    std::vector<size_t>{0},
+                    stmt->pos
                 );
                 break;
             }
@@ -138,8 +145,9 @@ void IRGenerator::gen_block(const BlockStmt* block) {
 
                 size_t name_idx = get_or_add_name(curr_names, get_mem->child->name);
                 curr_code_list.emplace_back(
-                Opcode::SET_ATTR,
-                    std::vector<size_t>{name_idx}
+                    Opcode::SET_ATTR,
+                    std::vector<size_t>{name_idx},
+                    stmt->pos
                 );
                 break;
             }
@@ -158,7 +166,8 @@ void IRGenerator::gen_if(IfStmt* if_stmt) {
     size_t jump_if_false_idx = curr_code_list.size();
     curr_code_list.emplace_back(
         Opcode::JUMP_IF_FALSE,
-        std::vector<size_t>{0} // 占位目标索引
+        std::vector<size_t>{0}, // 占位目标索引
+        if_stmt->pos
     );
 
     // 生成then块IR
@@ -168,7 +177,8 @@ void IRGenerator::gen_if(IfStmt* if_stmt) {
     size_t jump_else_idx = curr_code_list.size();
     curr_code_list.emplace_back(
         Opcode::JUMP,
-        std::vector<size_t>{0} // 占位目标索引
+        std::vector<size_t>{0}, // 占位目标索引
+        if_stmt->pos
     );
 
     // 填充JUMP_IF_FALSE的目标（else块开始位置）
@@ -195,7 +205,8 @@ void IRGenerator::gen_while(WhileStmt* while_stmt) {
     const size_t jump_if_false_idx = curr_code_list.size();
     curr_code_list.emplace_back(
         Opcode::JUMP_IF_FALSE,
-        std::vector<size_t>{0} // 占位，后续填充为循环结束位置
+        std::vector<size_t>{0}, // 占位，后续填充为循环结束位置
+        while_stmt->pos
     );
 
     auto loop_info = LoopInfo{{}, {}};
@@ -207,7 +218,8 @@ void IRGenerator::gen_while(WhileStmt* while_stmt) {
     // 生成JUMP指令，跳回循环入口
     curr_code_list.emplace_back(
         Opcode::JUMP,
-        std::vector<size_t>{loop_entry_idx}
+        std::vector<size_t>{loop_entry_idx},
+        while_stmt->pos
     );
 
     // 填充JUMP_IF_FALSE的目标（循环结束位置 = 当前代码列表长度）

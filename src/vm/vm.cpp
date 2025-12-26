@@ -64,19 +64,19 @@ Vm::Vm(const std::string& file_path_) {
     }));
 
     model::based_obj->attrs.insert("__getitem__", new model::CppFunction([](const model::Object* self, const model::List* args) -> model::Object* {
-        auto attr = get_one_arg(args);
+        auto attr = builtin::get_one_arg(args);
         auto attr_str = dynamic_cast<model::String*>(attr);
         assert(attr_str != nullptr);
         return get_attr(self, attr_str->val);
     }));
 
-    model::based_obj->attrs.insert("__setitem__", new model::CppFunction([](const model::Object* self, const model::List* args) -> model::Object* {
-        assert(args.size() == 2);
-        auto attr = args[0];
-        auto attr_str = dynamic_cast<model::String*>(attr);
-        assert(attr_str != nullptr);
-        return self->insert(attr_str->val, args[1]);
-    }));
+    // model::based_obj->attrs.insert("__setitem__", new model::CppFunction([](const model::Object* self, const model::List* args) -> model::Object* {
+    //     assert(args->val.size() == 2);
+    //     auto attr = args[0];
+    //     auto attr_str = dynamic_cast<model::String*>(attr);
+    //     assert(attr_str != nullptr);
+    //     return self->attrs->insert(attr_str->val, args[1]);
+    // }));
 
     // Bool 类型魔法方法
     model::based_bool->attrs.insert("__eq__", new model::CppFunction(model::bool_eq));
@@ -205,14 +205,14 @@ model::Object* Vm::get_return_val() {
 
 CallFrame* Vm::fetch_curr_callframe() {
     if ( !call_stack_.empty() ) {
-        return call_stack_.back()
+        return call_stack_.back().get();
     }
     assert(false);
 }
 
-model::Object* fetch_one_from_stack_top() { 
+model::Object* Vm::fetch_one_from_stack_top() {
     if ( !op_stack_.empty() ) {
-        return call_stack_.top()
+        return op_stack_.top();
     }
     assert(false);
 }

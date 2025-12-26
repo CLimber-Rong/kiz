@@ -7,8 +7,11 @@
 
 #pragma once
 #include <string>
+#include <vector>
 
-namespace util {
+#include "hashmap.hpp"
+
+namespace err {
 
 struct PositionInfo {
     // std::string file_path;
@@ -21,7 +24,6 @@ struct PositionInfo {
 struct ErrorInfo {
     const std::string name;
     const std::string content;
-    int err_code;
 };
 
 std::string generate_separator(int col_start, int col_end, int line_end);
@@ -32,4 +34,9 @@ void error_reporter(
     const ErrorInfo& error
 );
 
-}// namespace util
+void traceback_reporter(
+    const deps::HashMap<PositionInfo&>& positions,
+    const ErrorInfo& error
+);
+
+}// namespace err

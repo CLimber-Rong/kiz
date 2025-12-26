@@ -5,16 +5,17 @@
  * @author azhz1107cat
  */
 
-#include "util/error_reporter.hpp"
+#include "../../include/error/error_reporter.hpp"
 
 #include "util/src_manager.hpp"
 
 #include <iostream>
 #include <string>
 
+#include "kiz.hpp"
 #include "repl/color.hpp"
 
-namespace util {
+namespace err {
 
 std::string generate_separator(const int col_start, const int col_end, const int line_end) {
     std::stringstream ss;
@@ -25,10 +26,9 @@ std::string generate_separator(const int col_start, const int col_end, const int
     return ss.str();
 }
 
-void error_reporter(
-        const std::string& src_path,
-        const PositionInfo& pos,
-        const ErrorInfo& error
+void context_printer(
+    const std::string& src_path,
+    const PositionInfo& pos
 ) {
     size_t src_line_start = pos.lno_start;
     size_t src_line_end = pos.lno_end;
@@ -55,14 +55,35 @@ void error_reporter(
     std::cout << Color::WHITE << line_prefix << error_line << Color::RESET << std::endl;
     // 箭头（对准错误列）
     std::cout << std::string(caret_offset, ' ') << Color::BRIGHT_RED << caret << Color::RESET << std::endl;
+}
+
+
+void error_reporter(const std::string& src_path, const PositionInfo& pos, const ErrorInfo& error) {
+    context_printer(src_path, pos);
     // 错误信息（类型加粗红 + 内容白）
     std::cout << Color::BOLD << Color::BRIGHT_RED << error.name
               << Color::RESET << Color::WHITE << " : " << error.content
               << Color::RESET << std::endl;
     std::cout << std::endl;
 
-    // 退出程序（携带错误码）
-    std::exit(error.err_code);
+    throw KizStopRunningSignal();
 }
 
-} // namespace util
+
+void traceback_reporter(
+    const deps::HashMap<PositionInfo&>& positions,
+    const ErrorInfo& error
+) {
+    for (const auto& [src_path, pos] : positions.to_vector()) {
+        context_printer(src_path, pos);
+    }
+    // 错误信息（类型加粗红 + 内容白）
+    std::cout << Color::BOLD << Color::BRIGHT_RED << error.name
+              << Color::RESET << Color::WHITE << " : " << error.content
+              << Color::RESET << std::endl;
+    std::cout << std::endl;
+
+    throw KizStopRunningSignal();
+}
+
+} // namespace err

@@ -15,7 +15,7 @@
 
 namespace fs = std::filesystem;
 
-namespace util {
+namespace err {
 
 // key: 文件绝对路径, value: 文件内容
 inline std::unordered_map<std::string, std::string> opened_files; 
@@ -29,4 +29,4 @@ std::string get_file_by_path(const std::string& path);
 // 打开kiz文件并将其添加到opened_files, 返回文件内容
 std::string open_new_file(const std::string& path);
 
-} // namespace util
+} // namespace err

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include "util/error_reporter.hpp"
+#include "error/error_reporter.hpp"
 #include <cstddef>
 #include <unordered_map>
 
@@ -44,7 +44,7 @@ enum class TokenType {
 struct Token {
     TokenType type;
     std::string text;
-    util::PositionInfo pos{};
+    err::PositionInfo pos{};
     explicit Token( 
         TokenType tp,
         std::string t,

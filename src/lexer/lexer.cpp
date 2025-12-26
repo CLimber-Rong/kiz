@@ -14,7 +14,7 @@
 #include <map>
 #include <stdexcept>
 
-#include "util/error_reporter.hpp"
+#include "../../include/error/error_reporter.hpp"
 
 namespace kiz {
 
@@ -30,12 +30,17 @@ void register_keywords() {
     keywords["return"] = TokenType::Return;
     keywords["import"] = TokenType::Import;
     keywords["break"] = TokenType::Break;
+    keywords["nonlocal"] = TokenType::Nonlocal;
+    keywords["global"] = TokenType::Global;
     keywords["next"] = TokenType::Next;
     keywords["dict"] = TokenType::Dict;
     keywords["end"] = TokenType::End;
     keywords["True"] = TokenType::True;
     keywords["False"] = TokenType::False;
     keywords["Nil"] = TokenType::Nil;
+    keywords["and"] = TokenType::And;
+    keywords["or"] = TokenType::Or;
+    keywords["not"] = TokenType::Not;
 
     keywords_registered = true;
 }
@@ -350,13 +355,11 @@ std::vector<Token> Lexer::tokenize(const std::string& src) {
                 tokens.emplace_back(TokenType::Dot, ".", lineno, start_col);
             }
         } else {
-            util::ErrorInfo err = {
+            err::error_reporter(file_path, {lineno, lineno,
+                start_col, start_col},{
                 "SyntaxError",
-                "Unknown character '"+std::string(1, src[pos]) + "'",
-                1
-            };
-            util::error_reporter(file_path, {lineno, lineno,
-                start_col, start_col}, err
+                "Unknown character '"+std::string(1, src[pos]) + "'"
+            }
             );
         }
     }

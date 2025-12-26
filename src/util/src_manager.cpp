@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace util {
+namespace err {
 
 // 全局互斥锁：保证多线程下对opened_files的安全访问
 inline std::mutex opened_files_mutex;
@@ -128,4 +128,4 @@ std::string open_new_file(const std::string& path) {
     return file_content;
 }
 
-} // namespace util
+} // namespace err

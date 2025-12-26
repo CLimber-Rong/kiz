@@ -90,7 +90,7 @@ void Vm::exec_SET_GLOBAL(const Instruction& instruction) {
     if (name_idx >= global_frame->code_object->names.size()) {
         assert(false && "SET_GLOBAL: 变量名索引超出范围");
     }
-    std::string var_name = global_frame->code_object->names[name_idx];
+    std::string var_name = call_stack_.back()->code_object->names[name_idx];
 
     model::Object* var_val = op_stack_.top();
     op_stack_.pop();
@@ -136,7 +136,7 @@ void Vm::exec_SET_NONLOCAL(const Instruction& instruction) {
         assert(false && "SET_NONLOCAL: 调用帧不足/栈空/无变量名索引");
     }
     size_t name_idx = instruction.opn_list[0];
-    std::string var_name;
+    std::string var_name = call_stack_.back()->code_object->names[name_idx];
     CallFrame* target_frame = nullptr;
 
     auto frame_it = call_stack_.rbegin();
@@ -144,7 +144,6 @@ void Vm::exec_SET_NONLOCAL(const Instruction& instruction) {
     for (; frame_it != call_stack_.rend(); ++frame_it) {
         CallFrame* frame = frame_it->get();
         if (name_idx >= frame->code_object->names.size()) continue;
-        var_name = frame->code_object->names[name_idx];
         if (frame->locals.find(var_name)) {
             target_frame = frame;
             break;
@@ -159,10 +158,6 @@ void Vm::exec_SET_NONLOCAL(const Instruction& instruction) {
     op_stack_.pop();
     var_val->make_ref();
 
-    auto var_it = target_frame->locals.find(var_name);
-    if (var_it != nullptr) {
-        var_it->value->del_ref();
-    }
     target_frame->locals.insert(var_name, var_val);
 }
 

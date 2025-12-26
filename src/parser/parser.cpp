@@ -31,13 +31,13 @@ Token Parser::skip_token(const std::string& want_skip) {
     const Token& curr_tok = tokens_[curr_tok_idx_];
     // 无目标文本：直接跳过当前 Token
     if (want_skip.empty()) {
-        curr_tok_idx_++;
+        ++curr_tok_idx_;
         return curr_tok;
     }
 
     // 优先按文本匹配
     if (curr_tok.text == want_skip) {
-        curr_tok_idx_++;
+        ++curr_tok_idx_;
         return curr_tok;
     }
 
@@ -70,23 +70,22 @@ void Parser::skip_end_of_ln() {
     if (curr_tok.type == TokenType::EndOfFile) {
         return;
     }
+    DEBUG_OUTPUT("curr_tok: " + curr_tok.text);
     assert(false && "Invalid statement terminator");
 }
 
 // skip_start_of_block实现 处理函数体前置换行
 void Parser::skip_start_of_block() {
     DEBUG_OUTPUT("skipping start of block...");
-    // const Token curr_tok = curr_token();
-    // // if (curr_tok.type == TokenType::Colon) {
-    // //     skip_token(":");
-    // //     return;
-    // // }
-    // while (curr_tok.type == TokenType::EndOfLine) {
-    //     skip_token("\n");
+    const Token curr_tok = curr_token();
+    // if (curr_tok.type == TokenType::Colon) {
+    //     skip_token(":");
     //     return;
     // }
-    // assert(false && "Invalid statement terminator");
-    // skip_token();
+    while (curr_tok.type == TokenType::EndOfLine) {
+        skip_token("\n");
+        return;
+    }
 }
 
 // parse_program实现（解析整个程序
@@ -119,7 +118,8 @@ std::unique_ptr<BlockStmt> Parser::parse(const std::vector<Token>& tokens) {
     }
 
     DEBUG_OUTPUT("end parsing");
-    return std::make_unique<BlockStmt>(std::move(program_stmts));
+    constexpr err::PositionInfo pos = {0, 0, 0, 0};
+    return std::make_unique<BlockStmt>(pos, std::move(program_stmts));
 }
 
 } // namespace kiz

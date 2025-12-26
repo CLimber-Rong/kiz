@@ -20,7 +20,8 @@ void IRGenerator::gen_expr(Expression* expr) {
             const size_t name_idx = get_or_add_name(curr_names, ident->name);
             curr_code_list.emplace_back(
                 Opcode::LOAD_VAR,
-                std::vector<size_t>{name_idx}
+                std::vector<size_t>{name_idx},
+                expr->pos
             );
             break;
         }
@@ -50,7 +51,8 @@ void IRGenerator::gen_expr(Expression* expr) {
 
             curr_code_list.emplace_back(
                 opc,
-                std::vector<size_t>{}
+                std::vector<size_t>{},
+                expr->pos
             );
             break;
         }
@@ -66,7 +68,8 @@ void IRGenerator::gen_expr(Expression* expr) {
 
             curr_code_list.emplace_back(
                 opc,
-                std::vector<size_t>{}
+                std::vector<size_t>{},
+                expr->pos
             );
             break;
         }
@@ -84,8 +87,9 @@ void IRGenerator::gen_expr(Expression* expr) {
             }
             // 生成 OP_MAKE_LIST 指令
             curr_code_list.emplace_back(
-            Opcode::MAKE_LIST,
-                std::vector{list_expr->elements.size()}
+                Opcode::MAKE_LIST,
+                std::vector{list_expr->elements.size()},
+                expr->pos
            );
             break;
         }
@@ -95,8 +99,9 @@ void IRGenerator::gen_expr(Expression* expr) {
             gen_expr(get_mem->father.get()); // 生成对象IR
             size_t name_idx = get_or_add_name(curr_names, get_mem->child->name);
             curr_code_list.emplace_back(
-            Opcode::GET_ATTR,
-                std::vector<size_t>{name_idx}
+                Opcode::GET_ATTR,
+                std::vector<size_t>{name_idx},
+                expr->pos
                 );
             break;
         }
@@ -124,12 +129,14 @@ void IRGenerator::gen_expr(Expression* expr) {
                 const auto nil = new model::Nil();
                 const size_t nil_idx = get_or_add_const(curr_consts, nil);
                 curr_code_list.emplace_back(
-                Opcode::LOAD_CONST,
-                    std::vector<size_t>{nil_idx}
+                    Opcode::LOAD_CONST,
+                    std::vector<size_t>{nil_idx},
+                    expr->pos
                 );
                 curr_code_list.emplace_back(
-                Opcode::RET,
-                    std::vector<size_t>{}
+                    Opcode::RET,
+                    std::vector<size_t>{},
+                    expr->pos
                 );
             }
 
@@ -156,7 +163,8 @@ void IRGenerator::gen_expr(Expression* expr) {
             const size_t fn_const_idx = get_or_add_const(curr_consts, lambda_fn);
             curr_code_list.emplace_back(
                 Opcode::LOAD_CONST,
-                std::vector{fn_const_idx}
+                std::vector{fn_const_idx},
+                expr->pos
             );
             break;
         }
@@ -164,8 +172,9 @@ void IRGenerator::gen_expr(Expression* expr) {
             const auto nil = new model::Nil();
             const size_t nil_idx = get_or_add_const(curr_consts, nil);
             curr_code_list.emplace_back(
-            Opcode::LOAD_CONST,
-                std::vector<size_t>{nil_idx}
+                Opcode::LOAD_CONST,
+                std::vector<size_t>{nil_idx},
+                expr->pos
             );
             break;
         }
@@ -175,8 +184,9 @@ void IRGenerator::gen_expr(Expression* expr) {
             const auto bool_obj = new model::Bool(bool_ast->val);
             const size_t bool_idx = get_or_add_const(curr_consts, bool_obj);
             curr_code_list.emplace_back(
-            Opcode::LOAD_CONST,
-                std::vector<size_t>{bool_idx}
+                Opcode::LOAD_CONST,
+                std::vector<size_t>{bool_idx},
+                expr->pos
             );
             break;
         }
@@ -197,7 +207,8 @@ void IRGenerator::gen_fn_call(CallExpr* call_expr) {
     // 生成 OP_MAKE_LIST 指令：将栈顶 arg_count 个元素打包成参数列表，压回栈
     curr_code_list.emplace_back(
         Opcode::MAKE_LIST,
-        std::vector<size_t>{arg_count}
+        std::vector<size_t>{arg_count},
+        call_expr->pos
     );
 
     // 判断 callee 是否为 GetMemberExpr
@@ -211,14 +222,16 @@ void IRGenerator::gen_fn_call(CallExpr* call_expr) {
         // 生成 CALL_METHOD 指令：操作数为 方法名索引 + 参数个数（用于校验）
         curr_code_list.emplace_back(
             Opcode::CALL_METHOD,
-            std::vector<size_t>{method_name_idx, arg_count}
+            std::vector<size_t>{method_name_idx, arg_count},
+            call_expr->pos
         );
     } else {
         // 普通函数调用：生成函数对象IR → 生成 CALL 指令
         gen_expr(call_expr->callee.get());
         curr_code_list.emplace_back(
             Opcode::CALL,
-            std::vector<size_t>{arg_count}
+            std::vector<size_t>{arg_count},
+            call_expr->pos
         );
     }
 }
@@ -246,7 +259,8 @@ void IRGenerator::gen_dict(DictDeclExpr* expr) {
     size_t dict_const_idx = get_or_add_const(curr_consts, dict);
     curr_code_list.emplace_back(
         Opcode::LOAD_CONST,
-        std::vector<size_t>{dict_const_idx}
+        std::vector<size_t>{dict_const_idx},
+        expr->pos
     );
 }
 
@@ -270,7 +284,8 @@ void IRGenerator::gen_literal(Expression* expr) {
     size_t const_idx = get_or_add_const(curr_consts, const_obj);
     curr_code_list.emplace_back(
         Opcode::LOAD_CONST,
-        std::vector<size_t>{const_idx}
+        std::vector<size_t>{const_idx},
+        expr->pos
     );
 }
 
