@@ -31,14 +31,13 @@ struct Instruction {
     Opcode opc;
     std::vector<size_t> opn_list;
     util::PositionInfo pos{};
-    Instruction(Opcode o, std::vector<size_t> ol) : opc(o), opn_list(std::move(ol)) {}
+    Instruction(Opcode o, std::vector<size_t> ol, util::PositionInfo& p) : opc(o), opn_list(std::move(ol)), pos(std::move(p)) {}
 };
 
 struct CallFrame {
     std::string name;
 
-    // 本函数/模块对象的属性
-    deps::HashMap<model::Object*>& attrs;
+    model::Object* owner;
     deps::HashMap<model::Object*> locals;
 
     size_t pc = 0;
