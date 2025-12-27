@@ -70,13 +70,13 @@ Vm::Vm(const std::string& file_path_) {
         return get_attr(self, attr_str->val);
     }));
 
-    // model::based_obj->attrs.insert("__setitem__", new model::CppFunction([](const model::Object* self, const model::List* args) -> model::Object* {
-    //     assert(args->val.size() == 2);
-    //     auto attr = args[0];
-    //     auto attr_str = dynamic_cast<model::String*>(attr);
-    //     assert(attr_str != nullptr);
-    //     return self->attrs->insert(attr_str->val, args[1]);
-    // }));
+    model::based_obj->attrs.insert("__setitem__", new model::CppFunction([](model::Object* self, model::List* args) -> model::Object* {
+        assert(args->val.size() == 2);
+        auto attr = args[0];
+        auto attr_str = dynamic_cast<model::String*>(attr);
+        assert(attr_str != nullptr);
+        return self->attrs->insert(attr_str->val, args[1]);
+    }));
 
     // Bool 类型魔法方法
     model::based_bool->attrs.insert("__eq__", new model::CppFunction(model::bool_eq));
