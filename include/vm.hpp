@@ -58,13 +58,14 @@ public:
     static std::string file_path;
 
     explicit Vm(const std::string& file_path_);
-    static void load(model::Module* src_module);
-    static void extend_code(const model::CodeObject* code_object);
+    static void set_main_module(model::Module* src_module);
+    static void exec_curr_code();
+    static void set_curr_code(const model::CodeObject* code_object);
     static void load_required_modules(const deps::HashMap<model::Module*>& modules);
     static model::Object* get_stack_top();
     static void exec(const Instruction& instruction);
     static model::Object* get_return_val();
-    static CallFrame* fetch_curr_callframe();
+    static CallFrame* fetch_curr_call_frame();
     static model::Object* fetch_one_from_stack_top();
     static std::tuple<model::Object*, model::Object*> fetch_two_from_stack_top(const std::string& curr_instruction_name);
 

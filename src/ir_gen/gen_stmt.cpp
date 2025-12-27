@@ -8,22 +8,13 @@ namespace kiz {
 
 model::Module* IRGenerator::gen_mod(
     const std::string& module_name,
-    const std::vector<std::string>& names,
-    const std::vector<Instruction>& code_list,
-    const std::vector<model::Object*>& consts
+    model::CodeObject* module_code
 ) {
-    const auto code_obj = new model::CodeObject(
-        code_list,
-        consts,
-        names,
-        {}
-    );
-    code_obj->make_ref();
     DEBUG_OUTPUT("code object created with code list len " + std::to_string(code_list.size()));
-    assert(code_obj != nullptr);
+    assert(module_code != nullptr);
     const auto module_obj = new model::Module(
         module_name,
-        code_obj
+        module_code
     );
     module_obj->make_ref();
     return module_obj;

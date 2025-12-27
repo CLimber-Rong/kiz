@@ -119,16 +119,14 @@ public:
     std::vector<kiz::Instruction> code;
     std::vector<Object*> consts;
     std::vector<std::string> names;
-    std::vector<std::tuple<size_t, size_t>> lineno_map;
 
     static constexpr ObjectType TYPE = ObjectType::OT_CodeObject;
     [[nodiscard]] ObjectType get_type() const override { return TYPE; }
 
     explicit CodeObject(const std::vector<kiz::Instruction>& code,
         const std::vector<Object*>& consts,
-        const std::vector<std::string>& names,
-        const std::vector<std::tuple<size_t, size_t>>& lineno_map
-    ) : code(code), consts(consts), names(names), lineno_map(lineno_map) {}
+        const std::vector<std::string>& names
+    ) : code(code), consts(consts), names(names) {}
 
     [[nodiscard]] std::string to_string() const override {
         return "<CodeObject at " + ptr_to_string(this) + ">";

@@ -114,7 +114,9 @@ void args_parser(const int argc, char* argv[]) {
             const auto tokens = lexer.tokenize(content);
             auto ast = parser.parse(tokens);
             const auto ir = ir_gen.gen(std::move(ast));
-            vm.load(ir);
+            auto module = ir_gen.gen_mod(path, ir);
+            vm.set_main_module(module);
+            vm.exec_curr_code();
         }
         return;
     }
@@ -135,7 +137,9 @@ void args_parser(const int argc, char* argv[]) {
             const auto tokens = lexer.tokenize(content);
             auto ast = parser.parse(tokens);
             const auto ir = ir_gen.gen(std::move(ast));
-            vm.load(ir);
+            auto module = ir_gen.gen_mod(path, ir);
+            vm.set_main_module(module);
+            vm.exec_curr_code();
         } else {
             // 无效命令
             std::cerr << "错误: 无效指令 " << cmd << "\n";

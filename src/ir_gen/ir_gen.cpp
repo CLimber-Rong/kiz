@@ -37,7 +37,7 @@ size_t IRGenerator::get_or_add_const(std::vector<model::Object*>& consts, model:
     return consts.size() - 1;
 }
 
-model::Module* IRGenerator::gen(std::unique_ptr<BlockStmt> ast_into) {
+model::CodeObject* IRGenerator::gen(std::unique_ptr<BlockStmt> ast_into) {
     ast = std::move(ast_into);
     DEBUG_OUTPUT("generating...");
     // 检查AST根节点有效性（默认模块根为BlockStmt）
@@ -62,10 +62,10 @@ model::Module* IRGenerator::gen(std::unique_ptr<BlockStmt> ast_into) {
         DEBUG_OUTPUT(opcode_to_string(inst.opc)+opn_text);
     }
 
-    return gen_mod(file_path,
-        curr_names,
+    return new model::CodeObject(
         curr_code_list,
-        curr_consts
+        curr_consts,
+        curr_names
     );
 }
 
@@ -84,7 +84,7 @@ model::CodeObject* IRGenerator::make_code_obj() const {
     }
 
     const auto code_obj = new model::CodeObject(
-        curr_code_list, consts, curr_names, {}
+        curr_code_list, consts, curr_names
     );
     return code_obj;
 }

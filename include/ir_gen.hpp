@@ -33,16 +33,13 @@ class IRGenerator {
     const std::string& file_path;
 public:
     explicit IRGenerator(const std::string& file_path) : file_path(file_path) {}
-    model::Module* gen(std::unique_ptr<BlockStmt> ast_into);
+    model::CodeObject* gen(std::unique_ptr<BlockStmt> ast_into);
 
     static size_t get_or_add_name(std::vector<std::string>& names, const std::string& name);
     static size_t get_or_add_const(std::vector<model::Object*>& consts, model::Object* obj);
 
     [[nodiscard]] static model::Module* gen_mod(
-        const std::string& module_name,
-        const std::vector<std::string>& names,
-        const std::vector<Instruction>& code_list,
-        const std::vector<model::Object*>& consts
+        const std::string& module_name, model::CodeObject* module_code
     );
     void gen_block(const BlockStmt* block);
 

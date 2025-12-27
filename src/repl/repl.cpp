@@ -50,16 +50,17 @@ void Repl::eval_and_print(const std::string& cmd) {
 
     const auto tokens = lexer.tokenize(cmd);
     auto ast = parser.parse(tokens);
-    if (ast->statements.size() > 0 and
+    if (!ast->statements.empty() and
         dynamic_cast<kiz::ExprStmt*>(ast->statements.back().get())
     )   should_print = true;
 
     const auto ir = ir_gen.gen(std::move(ast));
     if (cmd_history_.size() < 2) {
-        vm_.load(ir);
+        const auto module = kiz::IRGenerator::gen_mod(file_path, ir);
+        vm_.set_main_module(module);
     } else {
-        assert(ir->code != nullptr && "No ir for run" );
-        vm_.extend_code(ir->code);
+        assert(ir != nullptr && "No ir for run" );
+        vm_.set_curr_code(ir);
     }
 
     DEBUG_OUTPUT("repl print");

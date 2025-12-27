@@ -143,8 +143,7 @@ void IRGenerator::gen_expr(Expression* expr) {
             const auto code_obj = new model::CodeObject(
                 curr_code_list,
                 curr_consts,
-                curr_names,
-                {}
+                curr_names
             );
 
             // 生成lambda函数体IR

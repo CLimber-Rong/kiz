@@ -139,7 +139,7 @@ Vm::Vm(const std::string& file_path_) {
     DEBUG_OUTPUT("current builtins: " + builtins.to_string());
 }
 
-void Vm::load(model::Module* src_module) {
+void Vm::set_main_module(model::Module* src_module) {
     DEBUG_OUTPUT("loading module...");
     // 合法性校验：防止空指针访问
     assert(src_module != nullptr && "Vm::run_module: 传入的src_module不能为nullptr");
@@ -165,10 +165,13 @@ void Vm::load(model::Module* src_module) {
     // 初始化VM执行状态：标记为"就绪"
     DEBUG_OUTPUT("start running");
     running_ = true; // 标记VM为运行状态（等待exec触发执行）
-    assert(!call_stack_.empty() && "Vm::load: 调用栈为空，无法执行指令");
+    assert(!call_stack_.empty() && "Vm::set_main_module: 调用栈为空，无法执行指令");
     auto& module_frame = *call_stack_.back(); // 获取当前模块的调用帧（栈顶）
-    assert(module_frame.code_object != nullptr && "Vm::load: 当前调用帧无关联CodeObject");
+    assert(module_frame.code_object != nullptr && "Vm::set_main_module: 当前调用帧无关联CodeObject");
+    exec_curr_code();
+}
 
+void Vm::exec_curr_code() {
     // 循环执行当前调用帧下的所有指令
     while (!call_stack_.empty() && running_) {
         auto& curr_frame = *call_stack_.back();
@@ -203,7 +206,7 @@ model::Object* Vm::get_return_val() {
     return op_stack_.top();
 }
 
-CallFrame* Vm::fetch_curr_callframe() {
+CallFrame* Vm::fetch_curr_call_frame() {
     if ( !call_stack_.empty() ) {
         return call_stack_.back().get();
     }
@@ -217,81 +220,31 @@ model::Object* Vm::fetch_one_from_stack_top() {
     assert(false);
 }
 
-void Vm::extend_code(const model::CodeObject* code_object) {
-    DEBUG_OUTPUT("exec extend_code (覆盖模式)...");
+void Vm::set_curr_code(const model::CodeObject* code_object) {
+    DEBUG_OUTPUT("exec set_curr_code (覆盖模式)...");
     DEBUG_OUTPUT("call stack length: " + std::to_string(call_stack_.size()));
 
     // 合法性校验
-    assert(code_object != nullptr && "Vm::extend_code: 传入的 code_object 不能为 nullptr");
-    assert(!call_stack_.empty() && "Vm::extend_code: 调用栈为空，需先通过 load() 加载模块");
+    assert(code_object != nullptr && "Vm::set_curr_code: 传入的 code_object 不能为 nullptr");
+    assert(!call_stack_.empty() && "Vm::set_curr_code: 调用栈为空，需先通过 set_main_module() 加载模块");
 
     // 获取全局模块级调用帧（REPL 共享同一个帧）
     auto& curr_frame = *call_stack_.back();
-    auto& global_code_obj = *curr_frame.code_object; // 原有全局 CodeObject
-    const size_t prev_instr_count = global_code_obj.code.size(); // 记录原有指令总数（用于后续执行新指令）
 
     // ========== 覆盖：常量池 ==========
-    // 清理原有全局常量池
-    for (model::Object* old_const : global_code_obj.consts) {
-        if (old_const != nullptr) {
-            old_const->del_ref();
-        }
-    }
-    global_code_obj.consts.clear();
-    global_code_obj.consts = code_object->consts;
     curr_frame.code_object->consts = code_object->consts;
 
     // ========== 覆盖：名称表 ==========
-    const size_t prev_name_count = global_code_obj.names.size();
-    global_code_obj.names.clear();
-    global_code_obj.names = code_object->names; // 覆盖 CodeObject 的 names
-    DEBUG_OUTPUT("extend_code: 覆盖名称表：原有 "
-        + std::to_string(prev_name_count)
-        + " 个 → 新 "
-        + std::to_string(global_code_obj.names.size())
-        + " 个（CallFrame names 同步更新）"
-    );
+    curr_frame.code_object->names = code_object->names; // 覆盖 CodeObject 的 names
 
-    // ========== 覆盖：行号映射 ==========
-    global_code_obj.lineno_map.clear();
-    global_code_obj.lineno_map = code_object->lineno_map;
-    DEBUG_OUTPUT("extend_code: 覆盖行号映射：新 "
-        + std::to_string(global_code_obj.lineno_map.size())
-        + " 条（CallFrame lineno_map 同步更新）"
-    );
+    // ========== 覆盖：指令 ==========
+    curr_frame.code_object->code = code_object->code;
+    DEBUG_OUTPUT("set_curr_code: 追加指令 ");
 
-    // ========== 追加指令 ==========
-    const size_t new_instr_count = code_object->code.size();
-    for (const auto& instr : code_object->code) {
-        global_code_obj.code.push_back(instr);
-    }
-    DEBUG_OUTPUT("extend_code: 追加指令 "
-        + std::to_string(new_instr_count)
-        + " 条（累计 "
-        + std::to_string(global_code_obj.code.size())
-        + " 条）"
-    );
-
-    // ========== 执行新追加的指令 ==========
-    curr_frame.pc = prev_instr_count; // 从原有指令末尾开始执行新指令
-    while (curr_frame.pc < global_code_obj.code.size()) {
-        const Instruction& curr_inst = global_code_obj.code[curr_frame.pc];
-        exec(curr_inst);
-        curr_frame.pc++;
-    }
-    DEBUG_OUTPUT("extend_code: 执行新指令完成（PC 从 "
-        + std::to_string(prev_instr_count)
-        + " 到 "
-        + std::to_string(curr_frame.pc)
-        + "）"
-    );
-
-    // ========== 清理临时资源：释放新 code_object 对常量的引用 ==========
-    for (model::Object* new_const : code_object->consts) {
-        if (new_const != nullptr) {
-            new_const->del_ref();
-        }
-    }
+    // ========== 执行指令 ==========
+    curr_frame.pc = 0;
+    exec_curr_code();
+    DEBUG_OUTPUT("set_curr_code: 执行新指令完成");
 }
 
 void Vm::load_required_modules(const deps::HashMap<model::Module*>& modules) {
