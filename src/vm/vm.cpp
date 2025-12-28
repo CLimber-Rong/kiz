@@ -146,7 +146,6 @@ void Vm::set_main_module(model::Module* src_module) {
     assert(src_module->code != nullptr && "Vm::run_module: 模块的CodeObject未初始化（code为nullptr）");
     // 注册为main module
     main_module = src_module;
-    err::PositionInfo pos = {1,1,1,1};
     // 创建模块级调用帧（CallFrame）：模块是顶层执行单元，对应一个顶层调用帧
     auto module_call_frame = std::make_unique<CallFrame>(
         src_module->name,                // 调用帧名称与模块名一致（便于调试）
@@ -156,8 +155,7 @@ void Vm::set_main_module(model::Module* src_module) {
 
         0,                               // 程序计数器初始化为0（从第一条指令开始执行）
         src_module->code->code.size(),   // 执行完所有指令后返回的位置（指令池末尾）
-        src_module->code,                 // 关联当前模块的CodeObject
-        pos
+        src_module->code                 // 关联当前模块的CodeObject
     );
 
     // 将调用帧压入VM的调用栈
@@ -262,29 +260,22 @@ void Vm::throw_error(const err::ErrorInfo& err) {
     std::string path;
 
     // 从调用栈收集位置信息
-    for (size_t i = 0; i < call_stack_.size(); ++i) {
-        const auto& frame = call_stack_[i];
-
+    size_t i = 0;
+    for (auto& frame: call_stack_) {
         // 获取模块路径
         if (const auto m = dynamic_cast<model::Module*>(frame->owner)) {
             path = m->name;
         }
 
-        err::PositionInfo pos{1,1,1,1};
-
-        // 对于最内层帧（错误发生处），使用当前 pc
+        err::PositionInfo pos{};
         if (i == call_stack_.size() - 1) {
-            if (frame->pc < frame->code_object->code.size()) {
-                pos = frame->code_object->code[frame->pc].pos;
-            }
+            pos = frame->code_object->code.at(frame->pc).pos;
+        } else {
+            pos = frame->code_object->code.at(frame->pc-1).pos
         }
-        // 对于其他帧，找到对应的 CALL 指令位置
-        else {
-            // 找到调用当前函数的 CALL 指令
-            pos = frame->call_pos;
-        }
-
+        
         positions.emplace_back(path, pos);
+        ++i;
     }
 
     err::traceback_reporter(positions, err);
