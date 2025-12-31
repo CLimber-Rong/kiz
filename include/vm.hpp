@@ -26,12 +26,15 @@ namespace kiz {
 
 enum class Opcode;
 
-
 struct Instruction {
     Opcode opc;
     std::vector<size_t> opn_list;
     err::PositionInfo pos{};
     Instruction(Opcode o, std::vector<size_t> ol, err::PositionInfo& p) : opc(o), opn_list(std::move(ol)), pos(std::move(p)) {}
+};
+
+struct TryBlockInfo {
+    size_t catch_start;
 };
 
 struct CallFrame {
@@ -43,6 +46,8 @@ struct CallFrame {
     size_t pc = 0;
     size_t return_to_pc;
     model::CodeObject* code_object;
+    
+    std::vector<TryBlockInfo> try_blocks;
 };
 
 class Vm {
