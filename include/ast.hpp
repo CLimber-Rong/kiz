@@ -28,7 +28,7 @@ enum class AstType {
     AssignStmt, NonlocalAssignStmt, GlobalAssignStmt,
     SetMemberStmt, SetItemStmt,
     BlockStmt, IfStmt, WhileStmt,
-    ReturnStmt, ImportStmt,
+    ReturnStmt, ImportStmt, ForStmt, TryStmt, CatchStmt,
     NullStmt, ExprStmt,
     BreakStmt, NextStmt
 };
@@ -206,6 +206,46 @@ struct WhileStmt final :  Statement {
         : condition(std::move(cond)), body(std::move(b)) {
         this->pos = pos;
         this->ast_type = AstType::WhileStmt;
+    }
+};
+
+// for语句
+struct ForStmt final :  Statement {
+    std::string item_var_name;
+    std::unique_ptr<Expression> iter;
+    std::unique_ptr<BlockStmt> body;
+    explicit ForStmt(const err::PositionInfo& pos,
+        std::string iv,
+        std::unique_ptr<Expression> i,
+        std::unique_ptr<BlockStmt> b
+    ) : item_var_name(std::move(iv), iter(std::move(i)), body(std::move(b)) {
+        this->ast_type = AstType::ForStmt;
+    }
+};
+
+// catch语句
+struct CatchStmt final :  Statement {
+    std::unique_ptr<Expression> error;
+    std::string var_name;
+    std::unique_ptr<BlockStmt> catch_block;
+    explicit CatchStmt(const err::PositionInfo& pos,
+        std::unique_ptr<Expression> e;
+        std::string v;
+        std::unique_ptr<BlockStmt> c;
+    ) : error(std::move(e)), var_name(std::move(v)), catch_block(std::move(c)) {
+        this->ast_type = AstType::CatchStmt;
+    }
+};
+
+// try语句
+struct TryStmt final :  Statement {
+    std::unique_ptr<BlockStmt> try_block;
+    std::vector<std::unique_ptr<CatchStmt>> catch_blocks;
+    explicit TryStmt(const err::PositionInfo& pos,
+        std::unique_ptr<BlockStmt> t,
+        std::vector<CatchStmt> c
+    ) : try_block(std::move(t), catch_blocks(std::move(c)) {
+        this->ast_type = AstType::TryStmt;
     }
 };
 
