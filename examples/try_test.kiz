@@ -1,3 +1,5 @@
+# 这段代码有问题: 引用计数错误导致堆结构错乱
+
 fn a()
     throw Error("RuntimeError", "foo")
 end
