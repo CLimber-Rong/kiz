@@ -109,16 +109,26 @@ class BigInt {
                     res.digits_[i + j] = static_cast<uint8_t>(sum % 10);
                     carry = sum / 10;
                 }
-                if (carry > 0) {
-                    res.digits_[i + b.digits_.size()] = static_cast<uint8_t>(carry);
+                // 修正：处理剩余进位（可能超过1位）
+                size_t carry_pos = i + b.digits_.size();
+                while (carry > 0) {
+                    if (carry_pos >= res.digits_.size()) {
+                        res.digits_.push_back(0);
+                    }
+                    uint32_t sum = res.digits_[carry_pos] + carry;
+                    res.digits_[carry_pos] = static_cast<uint8_t>(sum % 10);
+                    carry = sum / 10;
+                    carry_pos++;
                 }
             }
             res.trim_leading_zeros();
             return res;
         }
 
-        // 分治步骤：将 a、b 分为高低位（m 为较小长度的一半，向上取整）
-        size_t m = std::max(a.digits_.size(), b.digits_.size()) / 2;
+        // 修正：m 取较小长度的一半（向上取整）
+        size_t min_len = std::min(a.digits_.size(), b.digits_.size());
+        size_t m = (min_len + 1) / 2; // 向上取整，比如 min_len=5 → m=3，min_len=4→m=2
+
         BigInt a_low, a_high, b_low, b_high;
 
         // 拆分 a：a_low = a % 10^m，a_high = a / 10^m（逆序存储，前m位是低位）
@@ -137,28 +147,28 @@ class BigInt {
             b_high.digits_ = {0};
         }
 
-        // Karatsuba公式：(a_high*10^m + a_low) * (b_high*10^m + b_low)
-        // = z0*10^(2m) + (z1 - z0 - z2)*10^m + z2，其中 z0=a_low*b_low, z1=(a_low+a_high)*(b_low+b_high), z2=a_high*b_high
+        // Karatsuba公式：z0*10^(2m) + (z1 - z0 - z2)*10^m + z2
         BigInt z0 = karatsuba_mul(a_low, b_low);
         BigInt z1 = karatsuba_mul(a_low + a_high, b_low + b_high);
         BigInt z2 = karatsuba_mul(a_high, b_high);
 
-        // 计算结果：z0 + (z1 - z0 - z2)*10^m + z2*10^(2m)
-        BigInt res = z0 + (z1 - z0 - z2).shift_left(m) + z2.shift_left(2 * m);
+        // 修正：按标准顺序计算（加法交换律下结果一致，但更易读）
+        BigInt res = z2.shift_left(2 * m) + (z1 - z0 - z2).shift_left(m) + z0;
         res.trim_leading_zeros();
         return res;
     }
 
     /**
-     * @brief 左移（乘以 10^k，逆序存储中为末尾补k个0）
+     * @brief 左移（乘以 10^k，逆序存储中为开头补k个0）
      */
-    BigInt shift_left(size_t k) const {
+    [[nodiscard]] BigInt shift_left(size_t k) const {
         if (k == 0 || (digits_.size() == 1 && digits_[0] == 0)) {
             return *this;
         }
         BigInt res = *this;
-        // 尾部补0：逆序存储下，末尾加0等价于乘以10^k
-        res.digits_.insert(res.digits_.end(), k, 0); 
+        // 关键修正：在开头补0（低位在前，开头补0 = 乘以10^k）
+        res.digits_.insert(res.digits_.begin(), k, 0);
+        res.trim_leading_zeros(); // 补0后可能有前导零（逆序末尾），需清理
         return res;
     }
 
