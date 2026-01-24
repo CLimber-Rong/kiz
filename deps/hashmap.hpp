@@ -145,7 +145,6 @@ public:
         return VT();
     }
 
-    // 递归查找键
     [[nodiscard]] std::shared_ptr<Node> find(const std::string& key) const {
         return find_in_current(key);
     }
@@ -172,6 +171,49 @@ public:
         }
 
         return nullptr;
+    }
+
+    bool del(const std::string& attr_name) {
+        // 空桶数组直接返回删除失败
+        if (buckets_.empty()) {
+            return false;
+        }
+
+        // 计算键的哈希值和桶索引
+        const size_t hash = hash_string(attr_name);
+        const size_t bucket_idx = getBucketIndex(hash);
+        if (bucket_idx >= buckets_.size()) {
+            return false;
+        }
+
+        // 遍历链表查找目标节点（需要前驱节点指针）
+        std::shared_ptr<Node> prev = nullptr;
+        std::shared_ptr<Node> current = buckets_[bucket_idx];
+
+        while (current != nullptr) {
+            // 哈希值+键双重校验（避免哈希碰撞）
+            if (current->hash == hash && current->key == attr_name) {
+                // 要删除的是头节点
+                if (prev == nullptr) {
+                    buckets_[bucket_idx] = current->next;
+                }
+                // 要删除的是中间/尾节点
+                else {
+                    prev->next = current->next;
+                }
+
+                // 释放当前节点（shared_ptr自动管理，断开链接后计数减1）
+                current.reset();
+                elem_count_--; // 减少元素计数
+                return true;   // 删除成功
+            }
+
+            prev = current;
+            current = current->next;
+        }
+
+        // 遍历完未找到对应键，删除失败
+        return false;
     }
 
     // 转换为字符串（需T支持to_string()成员函数）

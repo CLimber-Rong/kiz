@@ -136,6 +136,7 @@ void Vm::exec_THROW(const Instruction& instruction) {
 
 void Vm::exec_CREATE_OBJECT(const Instruction& instruction) {
     auto obj = new model::Object();
+    obj->attrs.insert("__parent__", model::based_obj);
     op_stack.emplace(obj);
 }
 

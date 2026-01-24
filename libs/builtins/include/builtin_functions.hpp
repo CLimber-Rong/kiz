@@ -41,7 +41,7 @@ inline model::Object* check_based_object(model::Object* src_obj, model::Object* 
 // 内置函数
 model::Object* print(model::Object* self, const model::List* args);
 model::Object* input(model::Object* self, const model::List* args);
-model::Object* isinstance(model::Object* self, const model::List* args);
+model::Object* ischild(model::Object* self, const model::List* args);
 model::Object* help(model::Object* self, const model::List* args);
 model::Object* breakpoint(model::Object* self, const model::List* args);
 model::Object* range(model::Object* self, const model::List* args);
@@ -50,8 +50,8 @@ model::Object* now(model::Object* self, const model::List* args);
 model::Object* setattr(model::Object* self, const model::List* args);
 model::Object* getattr(model::Object* self, const model::List* args);
 model::Object* delattr(model::Object* self, const model::List* args);
+model::Object* hasattr(model::Object* self, const model::List* args);
 model::Object* get_refc(model::Object* self, const model::List* args);
-model::Object* copy(model::Object* self, const model::List* args);
 model::Object* create(model::Object* self, const model::List* args);
 model::Object* type_of_obj(model::Object* self, const model::List* args);
 

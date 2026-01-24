@@ -117,6 +117,7 @@ inline auto based_nil = new Object();
 inline auto based_str = new Object();
 inline auto based_native_function = new Object();
 inline auto based_error = new Object();
+inline auto based_module = new Object();
 
 class List;
 

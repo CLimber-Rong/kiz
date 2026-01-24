@@ -48,7 +48,7 @@ Vm::Vm(const std::string& file_path_) {
     DEBUG_OUTPUT("registering builtin functions...");
     builtins.insert("print", new model::NativeFunction(builtin::print));
     builtins.insert("input", new model::NativeFunction(builtin::input));
-    builtins.insert("isinstance", new model::NativeFunction(builtin::isinstance));
+    builtins.insert("ischild", new model::NativeFunction(builtin::ischild));
     builtins.insert("create", new model::NativeFunction(builtin::create));
     builtins.insert("now", new model::NativeFunction(builtin::now));
     builtins.insert("get_refc", new model::NativeFunction(builtin::get_refc));
@@ -58,8 +58,9 @@ Vm::Vm(const std::string& file_path_) {
     builtins.insert("delattr", new model::NativeFunction(builtin::delattr));
     builtins.insert("setattr", new model::NativeFunction(builtin::setattr));
     builtins.insert("getattr", new model::NativeFunction(builtin::getattr));
+    builtins.insert("hasattr", new model::NativeFunction(builtin::hasattr));
     builtins.insert("range", new model::NativeFunction(builtin::range));
-    builtins.insert("typeof", new model::NativeFunction(builtin::type_of_obj));
+    builtins.insert("type_of", new model::NativeFunction(builtin::type_of_obj));
 
 
     DEBUG_OUTPUT("registering builtin objects...");
@@ -172,6 +173,7 @@ Vm::Vm(const std::string& file_path_) {
     builtins.insert("NFunc", model::based_native_function);
     builtins.insert("__Nil", model::based_nil);
     builtins.insert("Error", model::based_error);
+    builtins.insert("Module", model::based_module);
     DEBUG_OUTPUT("current builtins: " + builtins.to_string());
 }
 

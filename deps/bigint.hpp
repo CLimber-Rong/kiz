@@ -198,11 +198,11 @@ class BigInt {
 public:
     // ========================= 构造与析构（同前，补充shift_left友元声明） =========================
     BigInt() : is_negative_(false), digits_(1, 0) {}
-    explicit BigInt(size_t val) : is_negative_(false) {
+    BigInt(size_t val) : is_negative_(false) {
         if (val == 0) { digits_.push_back(0); return; }
         while (val > 0) { digits_.push_back(static_cast<uint8_t>(val % 10)); val /= 10; }
     }
-    explicit BigInt(const std::string& s) : is_negative_(false) {
+    BigInt(const std::string& s) : is_negative_(false) {
         if (s.empty()) { digits_.push_back(0); return; }
         size_t start_idx = 0;
         if (s[0] == '-') { is_negative_ = true; start_idx = 1; }
