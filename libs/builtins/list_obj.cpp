@@ -1,22 +1,23 @@
 #include "../../src/models/models.hpp"
+#include "include/builtin_functions.hpp"
 
 namespace model {
 
 // List.__call__
-model::Object* list_call(model::Object* self, const model::List* args) {
-    auto obj = new model::List({});
+Object* list_call(Object* self, const List* args) {
+    auto obj = new List({});
     return obj;
 }
 
 // List.__bool__
-model::Object* list_bool(model::Object* self, const model::List* args) {
+Object* list_bool(Object* self, const List* args) {
     const auto self_int = dynamic_cast<List*>(self);
-    if (self_int->val.empty()) return new model::Bool(false);
-    return new model::Bool(true);
+    if (self_int->val.empty()) return new Bool(false);
+    return new Bool(true);
 }
 
 //  List.__add__：拼接另一个List（self + 传入List，返回新List）
-model::Object* list_add(model::Object* self, const model::List* args) {
+Object* list_add(Object* self, const List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (list_add)");
     assert(args->val.size() == 1 && "function List.add need 1 arg");
     
@@ -34,7 +35,7 @@ model::Object* list_add(model::Object* self, const model::List* args) {
 };
 
 // List.__mul__：重复自身n次 self * n
-model::Object* list_mul(model::Object* self, const model::List* args) {
+Object* list_mul(Object* self, const List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (list_mul)");
     assert(args->val.size() == 1 && "function List.mul need 1 arg");
     
@@ -55,7 +56,7 @@ model::Object* list_mul(model::Object* self, const model::List* args) {
 };
 
 // List.__eq__：判断两个List是否相等
-model::Object* list_eq(model::Object* self, const model::List* args) {
+Object* list_eq(Object* self, const List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (list_eq)");
     assert(args->val.size() == 1 && "function List.eq need 1 arg");
     
@@ -100,7 +101,7 @@ model::Object* list_eq(model::Object* self, const model::List* args) {
 };
 
 // List.contains：判断列表是否包含目标元素
-model::Object* list_contains(model::Object* self, const model::List* args) {
+Object* list_contains(Object* self, const List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (list_contains)");
     assert(args->val.size() == 1 && "function List.contains need 1 arg");
     
@@ -128,7 +129,7 @@ model::Object* list_contains(model::Object* self, const model::List* args) {
 };
 
 // List.append：向列表尾部添加一个元素
-model::Object* list_append(model::Object* self, const model::List* args) {
+Object* list_append(Object* self, const List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (list_append)");
     assert(args->val.size() == 1 && "function List.append need 1 arg");
     
@@ -165,6 +166,81 @@ Object* list_next(Object* self, const List* args) {
     }
     self->attrs.insert("__current_index__", new Int(dep::BigInt(0)));
     return new Bool(false);
+}
+
+Object* list_foreach(Object* self, const List* args) {
+    auto func_obj = builtin::get_one_arg(args);
+
+    auto self_list = dynamic_cast<List*>(self);
+    assert(self_list != nullptr);
+
+    dep::BigInt idx = 0;
+    for (auto e : self_list->val) {
+        kiz::Vm::call(func_obj, new List({e}), nullptr);
+        kiz::Vm::exec_code_until_start_frame();
+        idx += 1;
+    }
+    return new Nil();
+}
+
+Object* list_reverse(Object* self, const List* args) {
+    const auto self_list = dynamic_cast<List*>(self);
+    assert(self_list != nullptr);
+    std::ranges::reverse(self_list->val);
+    return new Nil();
+}
+
+Object* list_extend(Object* self, const List* args) {
+    auto other_list_obj = builtin::get_one_arg(args);
+    auto other_list = dynamic_cast<List*>(other_list_obj);
+    assert(other_list != nullptr);
+
+    auto self_list = dynamic_cast<List*>(self);
+    assert(self_list != nullptr);
+    for (auto e: other_list->val) {
+        self_list->val.push_back(e);
+    }
+    return new Nil();
+}
+
+Object* list_pop(Object* self, const List* args) {
+    auto self_list = dynamic_cast<List*>(self);
+    assert(self_list != nullptr);
+    self_list->val.pop_back();
+    return new Nil();
+}
+
+Object* list_insert(Object* self, const List* args) {
+    auto self_list = dynamic_cast<List*>(self);
+    assert(self_list != nullptr);
+    if (args->val.size() == 2) {
+        auto value_obj = args->val[0];
+        auto idx_obj = args->val[1];
+        auto idx_int = dynamic_cast<Int*>(idx_obj);
+        assert(idx_int != nullptr);
+        auto idx = idx_int->val.to_unsigned_long_long();
+        if (idx < self_list->val.size()) {
+            self_list->val[idx] = value_obj;
+        }
+    }
+    return new Nil();
+}
+
+Object* list_count(Object* self, const List* args) {
+    return new Nil();
+}
+
+Object* list_find(Object* self, const List* args) {
+    return new Nil();
+
+}
+
+Object* list_map(Object* self, const List* args) {
+    return new Nil();
+}
+
+Object* list_filter(Object* self, const List* args) {
+    return new Nil();
 }
 
 }  // namespace model

@@ -20,7 +20,11 @@ std::unique_ptr<Expr> Parser::parse_and_or() {
     DEBUG_OUTPUT("parsing and/or expression...");
     auto node = parse_comparison();
     
-    while (curr_token().type == TokenType::And or curr_token().type == TokenType::Or) {
+    while (
+        curr_token().type == TokenType::And
+        or curr_token().type == TokenType::Or
+        or curr_token().type == TokenType::Is
+    ) {
         auto op_token = skip_token(curr_token().text);
         auto right = parse_comparison(); // 解析右侧比较表达式
         node = std::make_unique<BinaryExpr>(
@@ -36,41 +40,20 @@ std::unique_ptr<Expr> Parser::parse_and_or() {
 std::unique_ptr<Expr> Parser::parse_comparison() {
     DEBUG_OUTPUT("parsing comparison...");
     auto node = parse_add_sub();
-    while (true) {
-        const auto curr_type = curr_token().type;
-        std::string op_text; // 存储运算符文本（如 "==" "in" "not in"）
-
-        if (curr_type == TokenType::Equal ||
-            curr_type == TokenType::NotEqual ||
-            curr_type == TokenType::Greater ||
-            curr_type == TokenType::Less ||
-            curr_type == TokenType::GreaterEqual ||
-            curr_type == TokenType::LessEqual) {
-            auto op_token = skip_token();
-            op_text = std::move(op_token.text);
-        }
-        // 处理in
-        else if (curr_type == TokenType::In) {
-            auto op_token = skip_token();
-            op_text = "in";
-        }
-        // 处理not in'
-        else if (
-            curr_type == TokenType::Not
-            and curr_tok_idx_ + 1 < tokens_.size()
-            and tokens_[curr_tok_idx_ + 1].type == TokenType::In
-        ) {
-            skip_token("not");
-            skip_token("in");
-            op_text = "not in";
-        }
-        else {
-            break;
-        }
+    while (
+        curr_token().type == TokenType::Equal
+        or curr_token().type == TokenType::NotEqual
+        or curr_token().type == TokenType::Greater
+        or curr_token().type == TokenType::Less
+        or curr_token().type == TokenType::GreaterEqual
+        or curr_token().type == TokenType::LessEqual
+    ) {
+        auto tok = curr_token();
+        auto op = skip_token().text;
         auto right = parse_add_sub();
         node = std::make_unique<BinaryExpr>(
             curr_token().pos,
-            std::move(op_text),
+            std::move(op),
             std::move(node),
             std::move(right)
         );
@@ -178,6 +161,9 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     const auto tok = skip_token();
     if (tok.type == TokenType::Number) {
         return std::make_unique<NumberExpr>(tok.pos, tok.text);
+    }
+    if (tok.type == TokenType::Decimal) {
+        return std::make_unique<DecimalExpr>(tok.pos, tok.text);
     }
     if (tok.type == TokenType::String) {
         return std::make_unique<StringExpr>(tok.pos, tok.text);

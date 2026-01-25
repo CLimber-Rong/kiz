@@ -46,13 +46,15 @@ set(SRC_FILES
         ${PROJECT_SOURCE_DIR}/src/vm/exec_calc.cpp
         ${PROJECT_SOURCE_DIR}/src/vm/exec_call.cpp
         ${PROJECT_SOURCE_DIR}/src/vm/exec_misc.cpp
-        ${PROJECT_SOURCE_DIR}/src/vm/registering_std_modules.cpp
+        ${PROJECT_SOURCE_DIR}/src/vm/entry_std_modules.cpp
+        ${PROJECT_SOURCE_DIR}/src/vm/entry_builtins.cpp
 
         # 工具模块
         ${PROJECT_SOURCE_DIR}/src/error/error_reporter.cpp
         ${PROJECT_SOURCE_DIR}/src/util/src_manager.cpp
         ${PROJECT_SOURCE_DIR}/src/repl/repl.cpp
         ${PROJECT_SOURCE_DIR}/src/input_helper/repl_input_helper.cpp
+        ${PROJECT_SOURCE_DIR}/libs/builtins/decimal_obj.cpp
 )
 
 # lib 模块（仅列cpp）

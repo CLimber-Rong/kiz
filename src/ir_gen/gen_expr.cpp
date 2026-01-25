@@ -8,12 +8,39 @@ namespace kiz {
 void IRGenerator::gen_expr(Expr* expr) {
     assert(expr && "gen_expr: 表达式节点为空");
     switch (expr->ast_type) {
-        case AstType::NumberExpr:
-            gen_literal(dynamic_cast<NumberExpr*>(expr));
+        case AstType::NumberExpr: {
+            // 生成LOAD_CONST指令（加载字面量常量）
+            auto const_obj = make_int_obj(dynamic_cast<NumberExpr*>(expr));
+            size_t const_idx = get_or_add_const(curr_consts, const_obj);
+            curr_code_list.emplace_back(
+                Opcode::LOAD_CONST,
+                std::vector{const_idx},
+                expr->pos
+            );
             break;
-        case AstType::StringExpr:
-            gen_literal(dynamic_cast<StringExpr*>(expr));
+        }
+        case AstType::StringExpr: {
+            // 生成LOAD_CONST指令（加载字面量常量）
+            auto const_obj = make_string_obj(dynamic_cast<StringExpr*>(expr));
+            size_t const_idx = get_or_add_const(curr_consts, const_obj);
+            curr_code_list.emplace_back(
+                Opcode::LOAD_CONST,
+                std::vector{const_idx},
+                expr->pos
+            );
             break;
+        }
+        case AstType::DecimalExpr: {
+            // 生成LOAD_CONST指令（加载字面量常量）
+            auto const_obj = make_decimal_obj(dynamic_cast<DecimalExpr*>(expr));
+            size_t const_idx = get_or_add_const(curr_consts, const_obj);
+            curr_code_list.emplace_back(
+                Opcode::LOAD_CONST,
+                std::vector{const_idx},
+                expr->pos
+            );
+            break;
+        }
         case AstType::IdentifierExpr: {
             // 标识符：生成LOAD_VAR指令（加载变量值）
             const auto* ident = dynamic_cast<IdentifierExpr*>(expr);
@@ -39,14 +66,18 @@ void IRGenerator::gen_expr(Expr* expr) {
             else if (bin_expr->op == "/") opc = Opcode::OP_DIV;
             else if (bin_expr->op == "%") opc = Opcode::OP_MOD;
             else if (bin_expr->op == "^") opc = Opcode::OP_POW;
+
             else if (bin_expr->op == "==") opc = Opcode::OP_EQ;
+            else if (bin_expr->op == ">=") opc = Opcode::OP_GE;
+            else if (bin_expr->op == "<=") opc = Opcode::OP_LE;
+            else if (bin_expr->op == "!=") opc = Opcode::OP_NE;
             else if (bin_expr->op == ">") opc = Opcode::OP_GT;
             else if (bin_expr->op == "<") opc = Opcode::OP_LT;
+
             else if (bin_expr->op == "and") opc = Opcode::OP_AND;
             else if (bin_expr->op == "or") opc = Opcode::OP_OR;
-            else if (bin_expr->op == "not") opc = Opcode::OP_NOT;
-            else if (bin_expr->op == "in") opc = Opcode::OP_IN;
             else if (bin_expr->op == "is") opc = Opcode::OP_IS;
+
             else assert(false && "gen_expr: 未支持的二元运算符");
 
             curr_code_list.emplace_back(
@@ -63,7 +94,7 @@ void IRGenerator::gen_expr(Expr* expr) {
 
             Opcode opc;
             if (unary_expr->op == "-") opc = Opcode::OP_NEG;
-            else if (unary_expr->op == "!") opc = Opcode::OP_NOT;
+            else if (unary_expr->op == "not") opc = Opcode::OP_NOT;
             else assert(false && "gen_expr: 未支持的一元运算符");
 
             curr_code_list.emplace_back(
@@ -259,31 +290,6 @@ void IRGenerator::gen_dict(DictDeclExpr* expr) {
     curr_code_list.emplace_back(
         Opcode::LOAD_CONST,
         std::vector<size_t>{dict_const_idx},
-        expr->pos
-    );
-}
-
-void IRGenerator::gen_literal(Expr* expr) {
-    assert(expr && "gen_literal: 字面量节点为空");
-    model::Object* const_obj = nullptr;
-
-    switch (expr->ast_type) {
-    case AstType::NumberExpr:
-        const_obj = make_int_obj(dynamic_cast<NumberExpr*>(expr));
-        break;
-    case AstType::StringExpr:
-        const_obj = make_string_obj(dynamic_cast<StringExpr*>(expr));
-        break;
-    default:
-        assert(false && "gen_literal: 未处理的字面量类型");
-    }
-
-    // 生成LOAD_CONST指令（加载字面量常量）
-    assert(const_obj && "gen_literal: 常量对象创建失败");
-    size_t const_idx = get_or_add_const(curr_consts, const_obj);
-    curr_code_list.emplace_back(
-        Opcode::LOAD_CONST,
-        std::vector<size_t>{const_idx},
         expr->pos
     );
 }

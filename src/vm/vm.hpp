@@ -43,8 +43,6 @@ struct TryBlockInfo {
     size_t catch_start = 0;
 };
 
-std::pair<std::string, std::string> get_err_name_and_msg(const model::Object* err_obj);
-
 struct CallFrame {
     std::string name;
 
@@ -85,10 +83,12 @@ public:
 
     explicit Vm(const std::string& file_path_);
 
+    static void entry_builtins();
     static void entry_std_modules();
 
     static void set_main_module(model::Module* src_module);
     static void exec_curr_code();
+    static void exec_code_until_start_frame();
     static void set_and_exec_curr_code(const model::CodeObject* code_object);
     static void load_required_modules(const dep::HashMap<model::Module*>& modules);
 
@@ -122,11 +122,14 @@ private:
     static void exec_EQ(const Instruction& instruction);
     static void exec_GT(const Instruction& instruction);
     static void exec_LT(const Instruction& instruction);
+    static void exec_GE(const Instruction& instruction);
+    static void exec_LE(const Instruction& instruction);
+    static void exec_NE(const Instruction& instruction);
     static void exec_AND(const Instruction& instruction);
     static void exec_NOT(const Instruction& instruction);
     static void exec_OR(const Instruction& instruction);
     static void exec_IS(const Instruction& instruction);
-    static void exec_IN(const Instruction& instruction);
+
     static void exec_MAKE_LIST(const Instruction& instruction);
     static void exec_CALL(const Instruction& instruction);
     static void exec_RET(const Instruction& instruction);
@@ -138,10 +141,12 @@ private:
     static void exec_SET_GLOBAL(const Instruction& instruction);
     static void exec_SET_LOCAL(const Instruction& instruction);
     static void exec_SET_NONLOCAL(const Instruction& instruction);
+
     static void exec_TRY_END(const Instruction& instruction);
     static void exec_TRY_START(const Instruction& instruction);
     static void exec_IMPORT(const Instruction& instruction);
     static void exec_LOAD_ERROR(const Instruction& instruction);
+
     static void exec_JUMP(const Instruction& instruction);
     static void exec_JUMP_IF_FALSE(const Instruction& instruction);
     static void exec_THROW(const Instruction& instruction);
