@@ -48,6 +48,8 @@ set(SRC_FILES
         ${PROJECT_SOURCE_DIR}/src/vm/exec_misc.cpp
         ${PROJECT_SOURCE_DIR}/src/vm/entry_std_modules.cpp
         ${PROJECT_SOURCE_DIR}/src/vm/entry_builtins.cpp
+        ${PROJECT_SOURCE_DIR}/src/vm/handle_error.cpp
+        ${PROJECT_SOURCE_DIR}/src/vm/execute_unit.cpp
 
         # 工具模块
         ${PROJECT_SOURCE_DIR}/src/error/error_reporter.cpp

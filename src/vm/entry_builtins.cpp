@@ -151,7 +151,8 @@ void Vm::entry_builtins() {
     model::based_str->attrs.insert("__hash__", new model::NativeFunction(model::str_hash));
     model::based_str->attrs.insert("contains", new model::NativeFunction(model::str_contains));
 
-    model::based_error->attrs.insert("__call__", new model::NativeFunction([](model::Object* self, model::List* args) -> model::Object* {   assert( args->val.size() == 2);
+    model::based_error->attrs.insert("__call__", new model::NativeFunction([](model::Object* self, model::List* args) -> model::Object* {
+        assert( args->val.size() == 2);
         auto err_name = args->val[0];
         auto err_msg = args->val[1];
 

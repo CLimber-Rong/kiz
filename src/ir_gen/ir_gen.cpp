@@ -53,13 +53,14 @@ model::CodeObject* IRGenerator::gen(std::unique_ptr<BlockStmt> ast_into) {
     gen_block(root_block);
 
     DEBUG_OUTPUT("gen : ir result");
+    size_t i = 0;
     for (const auto& inst : curr_code_list) {
         std::string opn_text;
-        for (auto opn : inst.opn_list)
-        {
+        for (auto opn : inst.opn_list) {
             opn_text += std::to_string(opn) + ",";
         }
-        DEBUG_OUTPUT(opcode_to_string(inst.opc)+opn_text);
+        std::cout << i << ":" << opcode_to_string(inst.opc) << " " << opn_text << std::endl;
+        ++i;
     }
 
     return new model::CodeObject(

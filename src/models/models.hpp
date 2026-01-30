@@ -375,8 +375,11 @@ public:
     }
 
     explicit Error() {
-        positions = {};
         attrs.insert("__parent__", based_error);
+    }
+
+    [[nodiscard]] std::string debug_string() const override {
+        return "Error";
     }
 };
 

@@ -233,10 +233,9 @@ void Vm::exec_IMPORT(const Instruction& instruction) {
             return;
         }
 
-        // 非跳转/非RET指令，程序计数器自增（跳转指令由自身修改PC）
-        if (curr_inst.opc != Opcode::JUMP &&
-            curr_inst.opc != Opcode::JUMP_IF_FALSE &&
-            curr_inst.opc != Opcode::RET) {
+        if (curr_inst.opc != Opcode::JUMP && curr_inst.opc != Opcode::JUMP_IF_FALSE &&
+            curr_inst.opc != Opcode::RET && curr_inst.opc != Opcode::START_CATCH &&
+            curr_inst.opc != Opcode::EXIT_TRY) {
             curr_frame.pc++;
         }
 

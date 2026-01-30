@@ -1,8 +1,8 @@
 try
     print("try")
     throw Error("foo", "message")
-catch e : Error
-    print("catch error", e)
+catch e : Int
+    print("catch error")
 finally
     print("finally")
 end

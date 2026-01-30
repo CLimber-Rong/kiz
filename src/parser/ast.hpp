@@ -256,10 +256,12 @@ struct CatchStmt final :  Stmt {
 struct TryStmt final :  Stmt {
     std::unique_ptr<BlockStmt> try_block;
     std::vector<std::unique_ptr<CatchStmt>> catch_blocks;
+    std::unique_ptr<BlockStmt> finally_block;
     explicit TryStmt(const err::PositionInfo& pos,
         std::unique_ptr<BlockStmt> t,
-        std::vector<std::unique_ptr<CatchStmt>> c
-    ) : try_block(std::move(t)), catch_blocks(std::move(c)) {
+        std::vector<std::unique_ptr<CatchStmt>> c,
+        std::unique_ptr<BlockStmt> f
+    ) : try_block(std::move(t)), catch_blocks(std::move(c)), finally_block(std::move(f)) {
         this->pos = pos;
         this->ast_type = AstType::TryStmt;
     }

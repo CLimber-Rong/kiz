@@ -268,33 +268,55 @@ std::unique_ptr<Stmt> Parser::parse_stmt() {
         auto tok = skip_token("try");
         
         skip_start_of_block();
-        auto try_block = parse_block(TokenType::Catch);
+        auto try_block = parse_block(TokenType::End, TokenType::Catch, TokenType::Finally);
         if (curr_token().type != TokenType::Catch)
-            err::error_reporter(this -> file_path, curr_token().pos, "SyntaxError",
+            err::error_reporter(file_path, curr_token().pos, "SyntaxError",
             "Found try block without catch block");
 
         std::vector<std::unique_ptr<CatchStmt>> catch_blocks;
         auto block_tok = curr_token();
 
-        while (curr_token().type != TokenType::End) {
+        while (curr_token().type == TokenType::Catch) {
             DEBUG_OUTPUT("parsing catch");
-            auto tok = skip_token("catch");
-            const std::string name = skip_token().text;
-            skip_token(":");
-            std::unique_ptr<Expr> expr = parse_expression();
+            auto catch_tok = skip_token("catch"); // 跳过catch关键字
+            const std::string var_name = skip_token().text; // 捕获变量名（e）
+            skip_token(":"); // 跳过冒号
+            std::unique_ptr<Expr> error_type = parse_expression(); // 捕获类型（Error）
 
             skip_start_of_block();
-            auto catch_block = parse_block(TokenType::Catch);
-            catch_blocks.push_back(std::make_unique<CatchStmt>(tok.pos, std::move(expr), name, std::move(catch_block)));
+            // catch块终止符包含Catch/Finally/End，避免吞掉finally
+            auto catch_block = parse_block(TokenType::Catch, TokenType::Finally, TokenType::End);
+            // 构建catch语句节点
+            catch_blocks.push_back(std::make_unique<CatchStmt>(
+                catch_tok.pos, std::move(error_type), var_name, std::move(catch_block)
+            ));
         }
 
-        skip_token("end");
+        // 先处理finally块，再处理end
+        std::unique_ptr<BlockStmt> finally_block;
+        if (curr_token().type == TokenType::Finally) {
+            skip_token("finally");
+            skip_start_of_block();
+            finally_block = parse_block();
+        }
+
+        // 必须存在end结束try块
+        if (curr_token().type != TokenType::End) {
+            err::error_reporter(file_path, curr_token().pos, "SyntaxError",
+                                "Try block not terminated with 'end'");
+        }
+        skip_token("end"); // 跳过end关键字
+
+        // 检查catch块非空
         if (catch_blocks.empty()) {
-            err::error_reporter(this -> file_path, curr_token().pos, "SyntaxError",
-                "Nothing in catch block");
+            err::error_reporter(file_path, tok.pos, "SyntaxError",
+                                "Try block has no valid catch blocks");
         }
 
-        return std::make_unique<TryStmt>(tok.pos, std::move(try_block), std::move(catch_blocks));
+        // 构建TryStmt节点，返回给上层
+        return std::make_unique<TryStmt>(tok.pos, std::move(try_block),
+            std::move(catch_blocks), std::move(finally_block)
+        );
     }
 
     // 解析赋值语句（x = expr;）
@@ -333,7 +355,7 @@ std::unique_ptr<Stmt> Parser::parse_stmt() {
             return set_item;
         }
         // 非成员访问表达式后不能跟 =
-        err::error_reporter(this -> file_path, curr_token().pos, "SyntaxError",
+        err::error_reporter(file_path, curr_token().pos, "SyntaxError",
             "Invalid assignment target: expected member access");
     }
 

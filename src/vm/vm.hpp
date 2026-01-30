@@ -41,6 +41,7 @@ struct Instruction {
 
 struct TryBlockInfo {
     size_t catch_start = 0;
+    size_t finally_start = 0;
 };
 
 struct CallFrame {
@@ -138,8 +139,9 @@ private:
     static void exec_SET_LOCAL(const Instruction& instruction);
     static void exec_SET_NONLOCAL(const Instruction& instruction);
 
-    static void exec_TRY_END(const Instruction& instruction);
-    static void exec_TRY_START(const Instruction& instruction);
+    static void exec_ENTER_TRY(const Instruction& instruction);
+    static void exec_START_CATCH(const Instruction& instruction);
+    static void exec_EXIT_TRY(const Instruction& instruction);
     static void exec_IMPORT(const Instruction& instruction);
     static void exec_LOAD_ERROR(const Instruction& instruction);
 

@@ -104,29 +104,6 @@ void Vm::exec_MAKE_DICT(const Instruction& instruction) {
     op_stack.push(dict_obj);
 }
 
-void Vm::exec_TRY_START(const Instruction& instruction) {
-    size_t catch_start = instruction.opn_list[0];
-    call_stack.back()->try_blocks.emplace_back(catch_start);
-}
-
-void Vm::exec_TRY_END(const Instruction& instruction) {
-    call_stack.back()->try_blocks.pop_back();
-
-    const size_t end_catch_pc = instruction.opn_list[0];
-    call_stack.back()->pc = end_catch_pc;
-}
-
-void Vm::exec_LOAD_ERROR(const Instruction& instruction) {
-    DEBUG_OUTPUT("loading curr error" + curr_error->debug_string());
-    op_stack.emplace(curr_error);
-}
-
-
-void Vm::exec_IS_INSTANCE(const Instruction& instruction) {
-    auto [a, b] = fetch_two_from_stack_top("is instance");
-    op_stack.emplace(builtin::check_based_object(a, b));
-}
-
 // -------------------------- 跳转指令 --------------------------
 void Vm::exec_JUMP(const Instruction& instruction) {
     DEBUG_OUTPUT("exec jump...");
@@ -168,17 +145,6 @@ void Vm::exec_JUMP_IF_FALSE(const Instruction& instruction) {
     }
 }
 
-// -------------------------- 异常处理 --------------------------
-void Vm::exec_THROW(const Instruction& instruction) {
-    DEBUG_OUTPUT("exec throw...");
-    auto* top = dynamic_cast<model::Error*>(op_stack.top());
-    assert(top != nullptr);
-    top->positions = gen_pos_info();
-    curr_error = top;
-    op_stack.pop();
-
-    handle_throw();
-}
 
 void Vm::exec_CREATE_OBJECT(const Instruction& instruction) {
     auto obj = new model::Object();

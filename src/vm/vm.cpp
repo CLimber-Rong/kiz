@@ -96,10 +96,11 @@ void Vm::exec_curr_code() {
         DEBUG_OUTPUT("curr inst is "+opcode_to_string(curr_inst.opc));
         DEBUG_OUTPUT("current stack top : " + (op_stack.empty() ? "[Nothing]" : op_stack.top()->debug_string()));
 
-        // 修正PC自增条件：仅非跳转/非RET指令自增
-        if (curr_inst.opc != Opcode::JUMP && curr_inst.opc != Opcode::JUMP_IF_FALSE && curr_inst.opc != Opcode::RET) {
+        if (curr_inst.opc != Opcode::JUMP && curr_inst.opc != Opcode::JUMP_IF_FALSE &&
+            curr_inst.opc != Opcode::RET && curr_inst.opc != Opcode::START_CATCH &&
+            curr_inst.opc != Opcode::EXIT_TRY) {
             curr_frame.pc++;
-        }
+            }
     }
 
     DEBUG_OUTPUT("call stack length: " + std::to_string(call_stack.size()));
@@ -145,117 +146,6 @@ void Vm::set_and_exec_curr_code(const model::CodeObject* code_object) {
     DEBUG_OUTPUT("set_and_exec_curr_code: 执行新指令完成");
 }
 
-
-auto Vm::gen_pos_info() -> std::vector<std::pair<std::string, err::PositionInfo>> {
-    size_t frame_index = 0;
-    std::vector<std::pair<std::string, err::PositionInfo>> positions;
-    std::string path;
-    for (const auto& frame: call_stack) {
-        if (const auto m = dynamic_cast<model::Module*>(frame->owner)) {
-            path = m->path;
-        }
-        err::PositionInfo pos {};
-        bool cond = frame_index == call_stack.size() - 1;
-        DEBUG_OUTPUT("frame_index: " << frame_index << ", call_stack.size(): " << call_stack.size());
-        if (cond) {
-            pos = frame->code_object->code.at(frame->pc).pos;
-        } else {
-            pos = frame->code_object->code.at(frame->pc - 1).pos;
-        }
-        DEBUG_OUTPUT(
-            "Vm::gen_pos_info, pos = col "
-            << pos.col_start << ", " << pos.col_end << " | line "
-            << pos.lno_start << ", " << pos.lno_end
-        );
-        positions.emplace_back(path, pos);
-        ++frame_index;
-    }
-    return positions;
-}
-
-void Vm::instruction_throw(const std::string& name, const std::string& content) {
-    const auto err_name = new model::String(name);
-    const auto err_msg = new model::String(content);
-
-    const auto err_obj = new model::Error();
-    err_obj->positions = gen_pos_info();
-    err_obj->attrs.insert("__name__", err_name);
-    err_obj->attrs.insert("__msg__", err_msg);
-    DEBUG_OUTPUT("err_obj pos size = "+std::to_string(err_obj->positions.size()));
-    curr_error = err_obj;
-    handle_throw();
-}
-
-
-// 辅助函数
-std::pair<std::string, std::string> get_err_name_and_msg(const model::Object* err_obj) {
-    assert(err_obj != nullptr);
-    auto err_name_it = err_obj->attrs.find("__name__");
-    auto err_msg_it = err_obj->attrs.find("__msg__");
-    assert(err_name_it != nullptr);
-    assert(err_msg_it != nullptr);
-    auto err_name = err_name_it->value->debug_string();
-    auto err_msg = err_msg_it->value->debug_string();
-    return {err_name, err_msg};
-}
-
-void Vm::handle_throw() {
-    assert(curr_error != nullptr);
-
-    size_t frames_to_pop = 0;
-    CallFrame* target_frame = nullptr;
-    size_t catch_pc = 0;
-
-    // 逆序遍历调用栈，寻找最近的 try 块（且当前不在该 catch 块内）
-    for (auto frame_it = call_stack.rbegin(); frame_it != call_stack.rend(); ++frame_it) {
-        CallFrame* frame = (*frame_it).get();
-        if (!frame->try_blocks.empty()) {
-            target_frame = frame;
-            catch_pc = frame->try_blocks.back().catch_start;
-            // 关键判断：如果当前 PC 已经在 catch 块内（>= catch_pc），则不重复捕获
-            if (frame->pc >= catch_pc) {
-                target_frame = nullptr; // 取消当前 try 块的捕获
-                frames_to_pop++;        // 继续向上查找更外层的 try 块
-                continue;
-            }
-            break;
-        }
-        frames_to_pop++;
-    }
-
-    // 如果找到有效的 try 块（当前不在 catch 内）
-    if (target_frame) {
-        // 弹出多余的栈帧
-        for (size_t i = 0; i < frames_to_pop; ++i) {
-            call_stack.pop_back();
-        }
-        // 设置 pc 到 catch 块开始
-        target_frame->pc = catch_pc;
-        return;
-    }
-
-    auto [error_name, error_msg] = get_err_name_and_msg(curr_error);
-
-    // 报错
-    std::cout << Color::BRIGHT_RED << "\nTrace Back: " << Color::RESET << std::endl;
-    DEBUG_OUTPUT("curr err pos size: "+std::to_string(curr_error->positions.size()));
-    for (auto& [_path, _pos]: curr_error->positions ) {
-        DEBUG_OUTPUT(_path + " " + std::to_string(_pos.lno_start) + " "
-            + std::to_string(_pos.lno_end) + " " + std::to_string(_pos.col_start) + " " + std::to_string(_pos.col_end));
-        err::context_printer(_path, _pos);
-    }
-
-    DEBUG_OUTPUT(error_name+" "+error_msg);
-
-    // 错误信息（类型加粗红 + 内容白）
-    std::cout << Color::BOLD << Color::BRIGHT_RED << error_name
-              << Color::RESET << Color::WHITE << " : " << error_msg
-              << Color::RESET << std::endl;
-    std::cout << std::endl;
-
-    throw KizStopRunningSignal();
-}
-
 void Vm::execute_instruction(const Instruction& instruction) {
     switch (instruction.opc) {
         case Opcode::OP_ADD:          exec_ADD(instruction);          break;
@@ -290,8 +180,11 @@ void Vm::execute_instruction(const Instruction& instruction) {
         case Opcode::LOAD_CONST:      exec_LOAD_CONST(instruction);    break;
         case Opcode::SET_GLOBAL:      exec_SET_GLOBAL(instruction);    break;
         case Opcode::SET_LOCAL:       exec_SET_LOCAL(instruction);     break;
-        case Opcode::ENTER_TRY:       exec_TRY_START(instruction);     break;
-        case Opcode::START_CATCH:         exec_TRY_END(instruction);       break;
+
+        case Opcode::ENTER_TRY:       exec_ENTER_TRY(instruction);     break;
+        case Opcode::START_CATCH:     exec_START_CATCH(instruction);   break;
+        case Opcode::EXIT_TRY:        exec_EXIT_TRY(instruction);      break;
+
         case Opcode::IMPORT:          exec_IMPORT(instruction);        break;
         case Opcode::LOAD_ERROR:      exec_LOAD_ERROR(instruction);    break;
         case Opcode::SET_NONLOCAL:    exec_SET_NONLOCAL(instruction);  break;
