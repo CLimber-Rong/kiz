@@ -494,13 +494,13 @@ public:
     [[nodiscard]] unsigned long long to_unsigned_long_long() const {
         // 检查是否为负数
         if (is_negative_) {
-            throw std::overflow_error("BigInt is negative, cannot convert to unsigned long long");
+            throw kiz::NativeFuncError("CalculateError","BigInt is negative, cannot convert to unsigned long long");
         }
 
         // 检查是否超出范围
         const BigInt ull_max_big(ULLONG_MAX);
         if (*this > ull_max_big) {
-            throw std::overflow_error("BigInt value exceeds ULLONG_MAX");
+            throw kiz::NativeFuncError("CalculateError","BigInt value exceeds ULLONG_MAX");
         }
 
         unsigned long long result = 0;

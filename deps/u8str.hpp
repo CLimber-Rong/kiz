@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <iostream>
 
+#include "vm/vm.hpp"
+
 namespace dep {
 
 // UTF-8 字符串类
@@ -159,7 +161,7 @@ public:
 
     // 运算符重载：[] 按 Unicode 码点索引
     char32_t operator[](size_t index) const {
-        if (index >= len()) throw std::out_of_range("u8str index out of range");
+        if (index >= len()) throw kiz::NativeFuncError("StringError", "u8str index out of range");
         const char* ptr = data_.data();
         for (size_t i = 0; i < index; ++i) {
             ptr += utf8_char_len(*ptr);

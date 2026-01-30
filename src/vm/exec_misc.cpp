@@ -75,7 +75,7 @@ void Vm::exec_MAKE_DICT(const Instruction& instruction) {
         model::Object* value = op_stack.top();
         op_stack.pop();
         if (!value) {
-            throw std::runtime_error("Null value in dictionary entry");
+            throw NativeFuncError("DictMadeError", "Null value in dictionary entry");
         }
         value->make_ref(); // 增加引用计数
 

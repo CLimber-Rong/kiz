@@ -24,7 +24,7 @@ std::streamsize util_write(const std::string& path,
         file.open(path, std::ios::trunc | std::ios::out | std::ios::binary);
         // 二次打开失败，抛出带路径的异常（权限不足/路径非法等）
         if (!file.is_open()) {
-            throw std::runtime_error("Failed to open/create file: " + path);
+            throw kiz::NativeFuncError("IOError","Failed to open/create file: " + path);
         }
     }
 
@@ -34,7 +34,7 @@ std::streamsize util_write(const std::string& path,
         file.seekp(n, std::ios::beg);
         // 校验偏移是否成功（如n为负数、超出系统最大文件偏移量等情况）
         if (file.tellp() != n) {
-            throw std::runtime_error("Failed to seek to offset: " + std::to_string(n));
+            throw kiz::NativeFuncError("IOError","Failed to seek to offset: " + std::to_string(n));
         }
 
         // 处理偏移量超出文件大小的情况：自动填充0补全空隙，避免文件空洞

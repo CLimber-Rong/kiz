@@ -26,7 +26,6 @@
 #include <cstdint>
 #endif
 
-// 简写命名空间，简化代码（C++20推荐）
 namespace fs = std::filesystem;
 
 /**
@@ -53,14 +52,14 @@ fs::path get_exe_abs_path() {
     } else if (len > 0) {
         exe_path = std::wstring(buf, len);
     } else {
-        throw std::runtime_error("Windows GetModuleFileNameW failed, error code: " + std::to_string(GetLastError()));
+        throw kiz::NativeFuncError("PathError","Windows GetModuleFileNameW failed, error code: " + std::to_string(GetLastError()));
     }
 #elif defined(__linux__)
     // Linux平台：读取/proc/self/exe符号链接（指向当前进程的可执行文件）
     char buf[PATH_MAX] = {0};
     ssize_t len = readlink("/proc/self/exe", buf, PATH_MAX - 1);
     if (len == -1) {
-        throw std::runtime_error("Linux readlink /proc/self/exe failed");
+        throw kiz::NativeFuncError("PathError", "Linux readlink /proc/self/exe failed");
     }
     exe_path = std::string(buf, len);
 #elif defined(__APPLE__)
@@ -73,7 +72,7 @@ fs::path get_exe_abs_path() {
         std::string big_buf(buf_len, '\0');
         ret = _NSGetExecutablePath(big_buf.data(), &buf_len);
         if (ret != 0) {
-            throw std::runtime_error("macOS _NSGetExecutablePath failed");
+            throw kiz::NativeFuncError("PathError", "macOS _NSGetExecutablePath failed");
         }
         exe_path = big_buf;
     } else {
@@ -82,7 +81,7 @@ fs::path get_exe_abs_path() {
     // macOS需将相对路径转换为绝对路径
     exe_path = fs::absolute(exe_path);
 #else
-    throw std::runtime_error("Unsupported platform");
+    throw kiz::KizStopRunningSignal("Unsupported platform");
 #endif
 
     // 确保返回绝对路径（跨平台兜底）
