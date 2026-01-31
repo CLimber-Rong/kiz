@@ -37,8 +37,7 @@ void Vm::instruction_throw(const std::string& name, const std::string& content) 
     const auto err_name = new model::String(name);
     const auto err_msg = new model::String(content);
 
-    const auto err_obj = new model::Error();
-    err_obj->positions = gen_pos_info();
+    const auto err_obj = new model::Error(gen_pos_info());
     err_obj->attrs.insert("__name__", err_name);
     err_obj->attrs.insert("__msg__", err_msg);
     DEBUG_OUTPUT("err_obj pos size = "+std::to_string(err_obj->positions.size()));
@@ -136,6 +135,7 @@ void Vm::handle_throw() {
                 // 重置错误处理状态, 使其在finally后可以rethrow
                 frame->try_blocks.back().handle_error = false;
                 std::cout << "change try_frame.handle_error: " << frame->try_blocks.back().handle_error << std::endl;
+                break;
             } else {
                 target_pc = try_frame.catch_start;
                 assert(target_pc != 0);

@@ -89,7 +89,6 @@ void Vm::exec_curr_code() {
         // 执行当前指令
         const Instruction& curr_inst = curr_frame.code_object->code[curr_frame.pc];
         try {
-            std::cout << "Start running instruction at pc = " << call_stack.back()->pc << std::endl;
             execute_instruction(curr_inst);
         } catch (NativeFuncError& e) {
             instruction_throw(e.name, e.msg);
@@ -99,7 +98,6 @@ void Vm::exec_curr_code() {
 
         if (curr_inst.opc != Opcode::JUMP && curr_inst.opc != Opcode::JUMP_IF_FALSE &&
             curr_inst.opc != Opcode::RET && curr_inst.opc != Opcode::JUMP_IF_FINISH_HANDLE_ERROR) {
-            std::cout << "advance pc" << std::endl;
             curr_frame.pc++;
         }
     }
@@ -148,7 +146,6 @@ void Vm::set_and_exec_curr_code(const model::CodeObject* code_object) {
 }
 
 void Vm::execute_instruction(const Instruction& instruction) {
-    std::cout << "Start running instruction at pc = " << call_stack.back()->pc << std::endl;
     switch (instruction.opc) {
         case Opcode::OP_ADD:          exec_ADD(instruction);          break;
         case Opcode::OP_SUB:          exec_SUB(instruction);          break;
