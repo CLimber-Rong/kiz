@@ -62,7 +62,6 @@ set(SRC_FILES
 set(LIB_SRC_FILES
         ${PROJECT_SOURCE_DIR}/libs/builtins/bool_methods.cpp
         ${PROJECT_SOURCE_DIR}/libs/builtins/int_methods.cpp
-        ${PROJECT_SOURCE_DIR}/libs/builtins/rational_methods.cpp
         ${PROJECT_SOURCE_DIR}/libs/builtins/decimal_methods.cpp
         ${PROJECT_SOURCE_DIR}/libs/builtins/nil_methods.cpp
         ${PROJECT_SOURCE_DIR}/libs/builtins/str_methods.cpp

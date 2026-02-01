@@ -40,7 +40,6 @@ void Vm::handle_call(model::Object* func_obj, model::Object* args_obj, model::Ob
             + "(self=" + (self ? self->debug_string() : "nullptr")
             + ", "+ args_obj->debug_string() + ")"
             );
-
         model::Object* return_val = cpp_func->func(self, args_list);
 
         DEBUG_OUTPUT("success to get the result of NativeFunction");
@@ -50,8 +49,7 @@ void Vm::handle_call(model::Object* func_obj, model::Object* args_obj, model::Ob
             return_val->make_ref();
         } else {
             // 若返回空，默认压入 Nil（避免栈异常）
-            return_val = new model::Nil();
-            return_val->make_ref();
+            return_val = model::load_nil();
         }
 
         // 返回值压入操作数栈

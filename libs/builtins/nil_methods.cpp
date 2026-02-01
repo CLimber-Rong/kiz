@@ -20,4 +20,8 @@ Object* nil_hash(Object* self, const List* args) {
     return new Int(0);
 }
 
+Object* nil_str(Object* self, const List* args) {
+    return create_str("Nil");
+}
+
 }  // namespace model

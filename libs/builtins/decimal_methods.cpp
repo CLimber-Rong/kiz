@@ -274,4 +274,9 @@ Object* decimal_safe_div(Object* self, const List* args) {
     return new Decimal(res);
 }
 
+Object* decimal_str(Object* self, const List* args) {
+    const auto self_dec = dynamic_cast<Decimal*>(self);
+    return create_str(self_dec->val.to_string());
+}
+
 }  // namespace model

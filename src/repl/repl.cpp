@@ -124,7 +124,7 @@ std::string Repl::read(const std::string& prompt) {
     std::cout << Color::BRIGHT_MAGENTA << prompt << Color::RESET;
     std::cout.flush();
     std::string result = to_utf8str(get_whole_input(&std::cin, &std::cout));
-    std::cout << "Repl read result (Test)" << dep::UTF8String(result) << std::endl;
+    // std::cout << "Repl read result (Test)" << dep::UTF8String(result) << std::endl;
     return result;
 }
 
@@ -177,7 +177,7 @@ void Repl::eval_and_print(const std::string& cmd, const size_t startline) {
     auto stack_top = vm_.fetch_one_from_stack_top();
     if (stack_top != nullptr) {
         if (not dynamic_cast<model::Nil*>(stack_top) and should_print) {
-            std::cout << stack_top->debug_string() << std::endl;
+            std::cout << vm_.obj_to_debug_str(stack_top) << std::endl;
         }
     }
 }

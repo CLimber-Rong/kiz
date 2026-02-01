@@ -12,14 +12,14 @@ Object* str_call(Object* self, const List* args) {
     } else {
         val = kiz::Vm::obj_to_str(args->val[0]);
     }
-    return new String(val);
+    return create_str(val);
 }
 
 // String.__bool__
 Object* str_bool(Object* self, const List* args) {
     const auto self_int = dynamic_cast<String*>(self);
     if (self_int->val.empty()) return new Bool(false);
-    return new Bool(true);
+    return load_true();
 }
 
 // String.__add__：字符串拼接（self + 传入String，返回新String，不修改原对象）
@@ -34,7 +34,7 @@ Object* str_add(Object* self, const List* args) {
     assert(another_str != nullptr && "String.add only supports String type argument");
     
     // 拼接并返回新String
-    return new String(self_str->val + another_str->val);
+    return create_str(self_str->val + another_str->val);
 };
 
 // String.__mul__：字符串重复n次（self * n，返回新String，n为非负整数）
@@ -111,6 +111,16 @@ Object* str_next(Object* self, const List* args) {
     }
     self->attrs.insert("__current_index__", new Int(0));
     return new Bool(false);
+}
+
+Object* str_str(Object* self, const List* args) {
+    auto self_str = dynamic_cast<String*>(self);
+    return create_str(self_str->val);
+}
+
+Object* str_dstr(Object* self, const List* args) {
+    auto self_str = dynamic_cast<String*>(self);
+    return create_str("\"" + self_str->val + "\"");
 }
 
 Object* str_getitem(Object* self, const List* args) {

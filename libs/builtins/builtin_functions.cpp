@@ -4,15 +4,14 @@
 #include <cstdint>
 
 #include "../../src/models/models.hpp"
-//#include "../deps/u8str.hpp"
+#include "../deps/u8str.hpp"
 
 namespace builtin {
 
 model::Object* print(model::Object* self, const model::List* args) {
-    //dep::u8str text;
-    std::string text;
-    for (const auto* arg : args->val) {
-        text += arg->debug_string() + " ";
+    dep::UTF8String text;
+    for (auto arg : args->val) {
+        text += dep::UTF8String(kiz::Vm::obj_to_debug_str(arg)) + " ";
     }
     std::cout << text << std::endl;
     return model::load_nil();
@@ -21,11 +20,11 @@ model::Object* print(model::Object* self, const model::List* args) {
 model::Object* input(model::Object* self, const model::List* args) {
     if (! args->val.empty()) {
         const auto prompt_obj = get_one_arg(args);
-        std::cout << prompt_obj->debug_string();
+        std::cout << model::cast_to_str(prompt_obj)->val;
     }
     std::string result;
     std::getline(std::cin, result);
-    return new model::String(result);
+    return model::create_str(result);
 }
 
 model::Object* ischild(model::Object* self, const model::List* args) {
@@ -75,7 +74,6 @@ Built-in Objects:
     Error
     Module
     __CodeObject
-    __Rational
     __Nil
 )";
     std::cout << text;
@@ -87,14 +85,14 @@ model::Object* breakpoint(model::Object* self, const model::List* args) {
     for (auto& frame: kiz::Vm::call_stack) {
         std::cout << "Frame [" << i << "] " << frame->name << "\n";
         std::cout << "=================================" << "\n";
-        std::cout << "Owner: " << frame->owner->debug_string() << "\n";
+        std::cout << "Owner: " << kiz::Vm::obj_to_debug_str(frame->owner) << "\n";
         std::cout << "Pc: " << frame->pc << "\n";
 
         std::cout << "Locals: " << "\n";
         size_t j = 1;
         auto locals_vector = frame->locals.to_vector();
         for (const auto& [n, l] : locals_vector) {
-            std::cout << n << " = " << l->debug_string();
+            std::cout << n << " = " << kiz::Vm::obj_to_debug_str(l);
             if (j<locals_vector.size()) std::cout << ", ";
             ++j;
         }
@@ -133,7 +131,8 @@ model::Object* cmd(model::Object* self, const model::List* args) {
     if (arg_vector.empty()) {
         return model::load_nil();
     }
-    std::system(args[0].debug_string().c_str());
+    auto instruction = arg_vector[0];
+    std::system(model::cast_to_str(instruction)->val.c_str());
     return model::load_nil();
 }
 
@@ -142,7 +141,7 @@ model::Object* now(model::Object* self, const model::List* args) {
         std::chrono::high_resolution_clock::now()
         .time_since_epoch();
     int64_t time = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
-    return new model::Int( dep::BigInt(std::to_string(time)) );
+    return model::create_int( dep::BigInt(std::to_string(time)) );
 }
 
 model::Object* range(model::Object* self, const model::List* args) {
@@ -154,43 +153,37 @@ model::Object* range(model::Object* self, const model::List* args) {
 
     if (arg_vector.size() == 1) {
         auto end_obj = arg_vector[0];
-        auto end_int_obj = dynamic_cast<model::Int*>(end_obj);
-        assert(end_int_obj != nullptr);
+        auto end_int_obj = model::cast_to_int(end_obj);
         end_int = end_int_obj->val;
     }
     else if (arg_vector.size() == 2) {
         auto start_obj = arg_vector[0];
-        auto start_int_obj = dynamic_cast<model::Int*>(start_obj);
-        assert(start_int_obj != nullptr);
+        auto start_int_obj = model::cast_to_int(start_obj);
         start_int = start_int_obj->val;
 
         auto end_obj = arg_vector[1];
-        auto end_int_obj = dynamic_cast<model::Int*>(end_obj);
-        assert(end_int_obj != nullptr);
+        auto end_int_obj = model::cast_to_int(end_obj);
         end_int = end_int_obj->val;
     }
     else if (arg_vector.size() == 3) {
         auto start_obj = arg_vector[0];
-        auto start_int_obj = dynamic_cast<model::Int*>(start_obj);
-        assert(start_int_obj != nullptr);
+        auto start_int_obj = model::cast_to_int(start_obj);
         start_int = start_int_obj->val;
 
         auto step_obj = arg_vector[1];
-        auto step_int_obj = dynamic_cast<model::Int*>(step_obj);
-        assert(step_int_obj != nullptr);
+        auto step_int_obj = model::cast_to_int(step_obj);
         step_int = step_int_obj->val;
 
         auto end_obj = arg_vector[2];
-        auto end_int_obj = dynamic_cast<model::Int*>(end_obj);
-        assert(end_int_obj != nullptr);
+        auto end_int_obj = model::cast_to_int(end_obj);
         end_int = end_int_obj->val;
     } else return model::load_nil();
 
     for (dep::BigInt i = start_int; i < end_int; i+=step_int) {
-        auto i_obj = new model::Int(i);
+        auto i_obj = model::create_int(i);
         range_vector.emplace_back(i_obj);
     }
-    return new model::List(range_vector);
+    return model::create_list(range_vector);
 }
 
 model::Object* setattr(model::Object* self, const model::List* args) {
@@ -201,7 +194,7 @@ model::Object* setattr(model::Object* self, const model::List* args) {
     auto for_set = arg_vector[0];
     auto attr_name = arg_vector[1];
     auto value = arg_vector[2];
-    for_set->attrs.insert(attr_name->debug_string(), value);
+    for_set->attrs.insert(model::cast_to_str(attr_name)->val, value);
     return model::load_nil();
 }
 
@@ -212,7 +205,7 @@ model::Object* getattr(model::Object* self, const model::List* args) {
     }
     model::Object* obj;
     model::Object* attr_name;
-    model::Object* default_value = new model::Nil();
+    model::Object* default_value =  model::load_nil();
     if (arg_vector.size() == 2 or arg_vector.size() == 3) {
         obj = arg_vector[0];
         attr_name = arg_vector[1];
@@ -220,7 +213,7 @@ model::Object* getattr(model::Object* self, const model::List* args) {
             default_value = arg_vector[2];
         }
         try {
-            return kiz::Vm::get_attr(obj, attr_name->debug_string());
+            return kiz::Vm::get_attr(obj, model::cast_to_str(attr_name)->val);
         } catch (...) {
             return default_value;
         }
@@ -232,13 +225,13 @@ model::Object* getattr(model::Object* self, const model::List* args) {
         default_value = arg_vector[3];
         if (kiz::Vm::is_true(current_only)) {
             if (const auto value =
-                obj->attrs.find(attr_name->debug_string())
+                obj->attrs.find(model::cast_to_str(attr_name)->val)
             ) return value->value;
             return default_value;
         }
 
         try {
-            return kiz::Vm::get_attr(obj, attr_name->debug_string());
+            return kiz::Vm::get_attr(obj, model::cast_to_str(attr_name)->val);
         } catch (...) {
             return default_value;
         }
@@ -250,18 +243,18 @@ model::Object* getattr(model::Object* self, const model::List* args) {
 model::Object* delattr(model::Object* self, const model::List* args) {
     auto arg_vector = args->val;
     if (arg_vector.size() == 1) {
-        return new model::Nil();
+        return model::load_nil();
     }
     model::Object* obj = arg_vector[0];
     model::Object* attr_name = arg_vector[1];
-    obj->attrs.del(attr_name->debug_string());
+    obj->attrs.del(model::cast_to_str(attr_name)->val);
     return model::load_nil();
 }
 
 model::Object* hasattr(model::Object* self, const model::List* args) {
     auto arg_vector = args->val;
     if (arg_vector.size() == 1) {
-        return new model::Nil();
+        return model::load_nil();
     }
     model::Object* obj;
     model::Object* attr_name;
@@ -270,10 +263,10 @@ model::Object* hasattr(model::Object* self, const model::List* args) {
         attr_name = arg_vector[1];
 
         try {
-            kiz::Vm::get_attr(obj, attr_name->debug_string());
-            return new model::Bool(true);
+            kiz::Vm::get_attr(obj, model::cast_to_str(attr_name)->val);
+            return model::load_true();
         } catch (...) {
-            return new model::Bool(false);
+            return model::load_false();
         }
     }
     if (arg_vector.size() == 3) {
@@ -282,15 +275,15 @@ model::Object* hasattr(model::Object* self, const model::List* args) {
         attr_name = arg_vector[2];
         if (kiz::Vm::is_true(current_only)) {
             if (const auto value =
-                obj->attrs.find(attr_name->debug_string())
-            ) return new model::Bool(true);
-            return new model::Bool(false);
+                obj->attrs.find(model::cast_to_str(attr_name)->val)
+            ) return model::load_true();
+            return model::load_false();
         }
         try {
-            kiz::Vm::get_attr(obj, attr_name->debug_string());
-            return new model::Bool(true);
+            kiz::Vm::get_attr(obj, model::cast_to_str(attr_name)->val);
+            return model::load_true();
         } catch (...) {
-            return new model::Bool(false);
+            return model::load_false();
         }
     }
     return model::load_nil();
@@ -298,7 +291,7 @@ model::Object* hasattr(model::Object* self, const model::List* args) {
 
 model::Object* get_refc(model::Object* self, const model::List* args) {
     const auto obj = get_one_arg(args);
-    return new model::Int( dep::BigInt(obj->get_refc_()) );
+    return model::create_int( obj->get_refc_() );
 }
 
 model::Object* create(model::Object* self, const model::List* args) {
@@ -334,7 +327,7 @@ model::Object* type_of_obj(model::Object* self, const model::List* args) {
         case model::Object::ObjectType::OT_Module: type_str = "Module"; break;
         default: type_str = "<Unknown>"; break;
     }
-    return new model::String(type_str);
+    return model::create_str(type_str);
 }
 
 }

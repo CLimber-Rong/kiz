@@ -200,10 +200,9 @@ void Vm::exec_SET_ATTR(const Instruction& instruction) {
     if (op_stack.size() < 2 || instruction.opn_list.empty()) {
         assert(false && "SET_ATTR: 操作数栈元素不足或无属性名索引");
     }
-    model::Object* attr_val = op_stack.top();
-    op_stack.pop();
-    model::Object* obj = op_stack.top();
-    op_stack.pop();
+    model::Object* attr_val = fetch_one_from_stack_top();
+    attr_val = model::copy_or_ref(attr_val);
+    model::Object* obj = fetch_one_from_stack_top();
     size_t name_idx = instruction.opn_list[0];
     CallFrame* curr_frame = call_stack.back().get();
 

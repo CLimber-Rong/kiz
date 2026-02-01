@@ -68,7 +68,7 @@ Object* list_eq(Object* self, const List* args) {
     
     // 比较元素个数，不同直接返回false
     if (self_list->val.size() != another_list->val.size()) {
-        return new Bool(false);
+        return load_false();
     }
     
     // 逐个比较元素
@@ -92,13 +92,47 @@ Object* list_eq(Object* self, const List* args) {
         
         // 任意元素不相等，返回 false
         if (!eq_bool->val) {
-            return new Bool(false);
+            return load_false();
         }
     }
     
     // 所有元素均相等，返回 true
-    return new Bool(true);
+    return load_true();
 };
+
+Object* list_str(Object* self, const List* args) {
+    auto self_list = dynamic_cast<List*>(self);
+    std::string result = "[";
+    for (size_t i = 0; i < self_list->val.size(); ++i) {
+        if (self_list->val[i] != nullptr) {
+            result += kiz::Vm::obj_to_str(self_list->val[i]);
+        } else {
+            result += "Nil";
+        }
+        if (i != self_list->val.size() - 1) {
+            result += ", ";
+        }
+    }
+    result += "]";
+    return create_str(result);
+}
+
+Object* list_dstr(Object* self, const List* args) {
+    auto self_list = dynamic_cast<List*>(self);
+    std::string result = "[";
+    for (size_t i = 0; i < self_list->val.size(); ++i) {
+        if (self_list->val[i] != nullptr) {
+            result += kiz::Vm::obj_to_debug_str(self_list->val[i]);
+        } else {
+            result += "Nil";
+        }
+        if (i != self_list->val.size() - 1) {
+            result += ", ";
+        }
+    }
+    result += "]";
+    return create_str(result);
+}
 
 // List.contains：判断列表是否包含目标元素
 Object* list_contains(Object* self, const List* args) {

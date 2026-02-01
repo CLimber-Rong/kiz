@@ -11,6 +11,12 @@ Object* bool_call(Object* self, const List* args) {
     );
 }
 
+Object* bool_str(Object* self, const List* args) {
+    const auto s = dynamic_cast<Bool*>(self);
+    return create_str(s->val ? "True" : "False");
+}
+
+
 // Bool.__eq__ 布尔值相等判断：self == args[0]（仅支持Bool与Bool比较）
 Object* bool_eq(Object* self, const List* args) {
     DEBUG_OUTPUT("You given " + std::to_string(args->val.size()) + " arguments (bool_eq)");

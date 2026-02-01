@@ -18,7 +18,6 @@
 #include "../../deps/bigint.hpp"
 #include "../../deps/decimal.hpp"
 #include "../../deps/dict.hpp"
-#include "../../deps/rational.hpp"
 
 namespace model {
 
@@ -114,7 +113,6 @@ inline auto based_list = new Object();
 inline auto based_function = new Object();
 inline auto based_dict = new Object();
 inline auto based_int = new Object();
-inline auto based_rational = new Object();
 inline auto based_bool = new Object();
 inline auto based_nil = new Object();
 inline auto based_str = new Object();
@@ -271,22 +269,6 @@ public:
     }
     [[nodiscard]] std::string debug_string() const override {
         return val.to_string();
-    }
-};
-
-
-class Rational : public Object {
-public:
-    dep::Rational val;
-
-    static constexpr ObjectType TYPE = ObjectType::OT_Rational;
-    [[nodiscard]] ObjectType get_type() const override { return TYPE; }
-
-    explicit Rational(const dep::Rational& val) : val(val) {
-        attrs.insert("__parent__", based_rational);
-    }
-    [[nodiscard]] std::string debug_string() const override {
-        return val.numerator.to_string() + "/" + val.denominator.to_string();
     }
 };
 

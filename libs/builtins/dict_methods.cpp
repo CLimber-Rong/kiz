@@ -105,4 +105,37 @@ Object* dict_getitem(Object* self, const List* args) {
     );
 }
 
+
+Object* dict_str(Object* self, const List* args) {
+    auto self_dict = dynamic_cast<Dictionary*>(self);
+    std::string result = "{";
+    auto kv_list = self_dict->val.to_vector();
+    size_t i = 0;
+    for (auto& [_, kv_pair] : kv_list) {
+        result += kiz::Vm::obj_to_str(kv_pair.first) + ": " + kiz::Vm::obj_to_str(kv_pair.second);
+        if (i != kv_list.size() - 1) {
+            result += ", ";
+        }
+        ++i;
+    }
+    result += "}";
+    return create_str(result);
+}
+
+Object* dict_dstr(Object* self, const List* args) {
+    auto self_dict = dynamic_cast<Dictionary*>(self);
+    std::string result = "{";
+    auto kv_list = self_dict->val.to_vector();
+    size_t i = 0;
+    for (auto& [_, kv_pair] : kv_list) {
+        result += kiz::Vm::obj_to_debug_str(kv_pair.first) + ": " + kiz::Vm::obj_to_debug_str(kv_pair.second);
+        if (i != kv_list.size() - 1) {
+            result += ", ";
+        }
+        ++i;
+    }
+    result += "}";
+    return create_str(result);
+}
+
 }  // namespace model

@@ -8,17 +8,15 @@ namespace kiz {
 
 auto Vm::fetch_two_from_stack_top(
     const std::string& op_name
-)-> std::tuple<model::Object*, model::Object*> {
+) -> std::tuple<model::Object*, model::Object*> {
     if (op_stack.size() < 2) {
         std::string err_msg = "OP_" + op_name + ": 操作数栈元素不足（需≥2）";
-        std::cout << err_msg << std::endl;
+        std::cout << err_msg << "\n";
         assert(false);
     }
     // 栈顶是右操作数（后压入的），次顶是左操作数（先压入的）
-    auto b = op_stack.top();
-    op_stack.pop();
-    auto a = op_stack.top();
-    op_stack.pop();
+    auto b = fetch_one_from_stack_top();
+    auto a = fetch_one_from_stack_top();
     return {a, b};
 }
 

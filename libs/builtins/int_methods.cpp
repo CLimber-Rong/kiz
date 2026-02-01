@@ -229,5 +229,10 @@ Object* int_hash(Object* self, const List* args) {
     return new Int(self_int->val);
 }
 
+Object* int_str(Object* self, const List* args) {
+    auto self_int = dynamic_cast<Int*>(self);
+    return create_str(self_int->val.to_string());
+}
+
 
 }  // namespace model

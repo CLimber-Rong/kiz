@@ -12,7 +12,7 @@ object Point
         return Point(this.x + other.x, this.y + other.y)
     end
 
-    fn to_string(this)
+    fn __str__(this)
         return "Point(x=" + Str(this.x) + ", y=" + Str(this.y) +")"
     end
 
@@ -21,4 +21,4 @@ end
 a = Point(3,5)
 b = Point(4,0)
 c = a + b
-print(c.to_string())
+print(c)

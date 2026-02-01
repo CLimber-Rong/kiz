@@ -18,21 +18,26 @@
 
 #include "kiz.hpp"
 #include "util/src_manager.hpp"
-/* 提供命令行帮助信息函数 */
+
+/// 提供命令行帮助信息函数
 void show_help(const char* prog_name);
 
-/* 命令行参数解析函数 */
+/// 命令行参数解析函数
 void args_parser(int argc, char* argv[]);
 
-/*
- * 主函数
- */
+/// 测试examples文件夹中所有文件
+void start_test();
+
+/// 运行文件
+void run_file(const std::string& file_path);
+
+/// 主函数
 int main(const int argc, char* argv[]) {
     args_parser(argc, argv);
     return 0;
 }
 
-/* 提供命令行帮助信息函数 */
+/// 提供命令行帮助信息函数
 void show_help();
 
 void enable_ansi_escape() {
@@ -101,22 +106,12 @@ void args_parser(const int argc, char* argv[]) {
         } else if (cmd == "help") {
             // 显示帮助信息
             show_help();
+        } else if (cmd == "__test__") {
+            // 测试
+            start_test();
         } else {
             std::string path = argv[1];
-            DEBUG_OUTPUT("reading file at "+path);
-            const auto content = err::SrcManager::get_file_by_path(path);
-            DEBUG_OUTPUT("file content is "+content);
-            kiz::Lexer lexer(path);
-            kiz::Parser parser(path);
-            kiz::IRGenerator ir_gen(path);
-            kiz::Vm vm(path);
-
-            const auto tokens = lexer.tokenize(content);
-            auto ast = parser.parse(tokens);
-            const auto ir = ir_gen.gen(std::move(ast));
-            auto module = kiz::IRGenerator::gen_mod(path, ir);
-            kiz::Vm::set_main_module(module);
-            kiz::Vm::exec_curr_code();
+            run_file(path);
         }
         return;
     }
@@ -126,20 +121,7 @@ void args_parser(const int argc, char* argv[]) {
         const std::string cmd = argv[1];
         if (cmd == "run") {
             std::string path = argv[2];
-            DEBUG_OUTPUT("reading file at "+path);
-            const auto content = err::SrcManager::get_file_by_path(path);
-            DEBUG_OUTPUT("file content is "+content);
-            kiz::Lexer lexer(path);
-            kiz::Parser parser(path);
-            kiz::IRGenerator ir_gen(path);
-            kiz::Vm vm(path);
-            
-            const auto tokens = lexer.tokenize(content);
-            auto ast = parser.parse(tokens);
-            const auto ir = ir_gen.gen(std::move(ast));
-            auto module = kiz::IRGenerator::gen_mod(path, ir);
-            kiz::Vm::set_main_module(module);
-            kiz::Vm::exec_curr_code();
+            run_file(path);
         } else {
             // 无效命令
             std::cerr << "错误: 无效指令 " << cmd << "\n";
@@ -151,6 +133,21 @@ void args_parser(const int argc, char* argv[]) {
     // 参数过多 : 提示错误并显示帮助
     std::cerr << "错误: 太多参数";
     show_help();
+}
+
+void run_file(const std::string& path) {
+    const auto content = err::SrcManager::get_file_by_path(path);
+    kiz::Lexer lexer(path);
+    kiz::Parser parser(path);
+    kiz::IRGenerator ir_gen(path);
+    kiz::Vm vm (path); // 初始化vm
+
+    const auto tokens = lexer.tokenize(content);
+    auto ast = parser.parse(tokens);
+    const auto ir = ir_gen.gen(std::move(ast));
+    auto module = kiz::IRGenerator::gen_mod(path, ir);
+    kiz::Vm::set_main_module(module);
+    kiz::Vm::exec_curr_code();
 }
 
 void show_help() {
@@ -201,4 +198,30 @@ the kiz cmd help
   -----------------------
 )";
     std::cout << text << std::endl;
+}
+
+/// 启动测试
+void start_test() {
+    const fs::path target_dir = R"(../examples)";
+    // 检查目录是否存在
+    if (!fs::exists(target_dir) || !fs::is_directory(target_dir)) {
+        std::cerr << "invalid dir: " << target_dir << std::endl;
+        return;
+    }
+
+    // 遍历目录
+    for (const fs::directory_entry& entry : fs::directory_iterator(target_dir)) {
+        if (entry.is_regular_file()) {
+            const fs::path& f_path = entry.path();
+            if (f_path.string().ends_with(".txt")) continue;
+            std::cout << "===== [file]: " << f_path << " =====" << "\n";
+            try {
+                run_file(f_path.string());
+            } catch (KizStopRunningSignal& e) {
+                std::cout << "====== recover from a error =====\n";
+                continue;
+            }
+            std::cout << "========================\n" << "\n";
+        }
+    }
 }

@@ -199,27 +199,41 @@ void Vm::execute_instruction(const Instruction& instruction) {
 }
 
 std::string Vm::obj_to_str(model::Object* for_cast_obj) {
+    DEBUG_OUTPUT("obj to str");
     model::Object* method;
     try {
         method = get_attr(for_cast_obj, "__str__");
-    } catch (...) {
-        method = get_attr(for_cast_obj, "__dstr__");
+    } catch (NativeFuncError& e) {
+        try {
+            method = get_attr(for_cast_obj, "__dstr__");
+        } catch (NativeFuncError& e2) {
+            method = get_attr(model::based_obj, "__str__");
+        }
     }
-    call_function(method, new model::List({}), for_cast_obj);
-    std::string val = model::cast_to_str(for_cast_obj)->val;
+    assert(method != nullptr);
+    call_function(method, model::create_list({}), for_cast_obj);
+    auto res = fetch_one_from_stack_top();
+    std::string val = model::cast_to_str(res)->val;
     return val;
 }
 
 
 std::string Vm::obj_to_debug_str(model::Object* for_cast_obj) {
+    DEBUG_OUTPUT("obj to debug str");
     model::Object* method;
     try {
         method = get_attr(for_cast_obj, "__dstr__");
-    } catch (...) {
-        method = get_attr(for_cast_obj, "__str__");
+    } catch (NativeFuncError& e) {
+        try {
+            method = get_attr(for_cast_obj, "__str__");
+        } catch (NativeFuncError& e2) {
+            method = get_attr(model::based_obj, "__str__"); // 兜底
+        }
     }
-    call_function(method, new model::List({}), for_cast_obj);
-    std::string val = model::cast_to_str(for_cast_obj)->val;
+    assert(method != nullptr);
+    call_function(method, model::create_list({}), for_cast_obj);
+    auto res = fetch_one_from_stack_top();
+    std::string val = model::cast_to_str(res)->val;
     return val;
 }
 

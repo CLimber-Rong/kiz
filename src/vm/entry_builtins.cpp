@@ -31,7 +31,6 @@ void Vm::entry_builtins() {
     model::based_bool->attrs.insert("__parent__", model::based_obj);
     model::based_int->attrs.insert("__parent__", model::based_obj);
     model::based_nil->attrs.insert("__parent__", model::based_obj);
-    model::based_rational->attrs.insert("__parent__", model::based_obj);
     model::based_function->attrs.insert("__parent__", model::based_obj);
     model::based_decimal->attrs.insert("__parent__", model::based_obj);
     model::based_module->attrs.insert("__parent__", model::based_obj);
@@ -43,13 +42,14 @@ void Vm::entry_builtins() {
 
     DEBUG_OUTPUT("registering magic methods...");
 
-    // Object 基类 __eq__
+    // Object 基类 方法
     model::based_obj->attrs.insert("__eq__", new model::NativeFunction([](const model::Object* self, const model::List* args) -> model::Object* {
         const auto other_obj = builtin::get_one_arg(args);
-        return new model::Bool(self == other_obj);
+        return model::load_bool(self == other_obj);
     }));
+
     model::based_obj->attrs.insert("__str__", new model::NativeFunction([](const model::Object* self, const model::List* args) -> model::Object* {
-        return new model::String(self->debug_string());
+        return model::create_str("<Object at " + model::ptr_to_string(self) + ">");
     }));
 
     model::based_obj->attrs.insert("__getitem__", new model::NativeFunction([](const model::Object* self, const model::List* args) -> model::Object* {
@@ -72,10 +72,12 @@ void Vm::entry_builtins() {
     model::based_bool->attrs.insert("__eq__", new model::NativeFunction(model::bool_eq));
     model::based_bool->attrs.insert("__call__", new model::NativeFunction(model::bool_call));
     model::based_bool->attrs.insert("__hash__", new model::NativeFunction(model::bool_hash));
+    model::based_bool->attrs.insert("__str__", new model::NativeFunction(model::bool_str));
 
     // Nil 类型魔法方法
     model::based_nil->attrs.insert("__eq__", new model::NativeFunction(model::nil_eq));
     model::based_nil->attrs.insert("__hash__", new model::NativeFunction(model::nil_hash));
+    model::based_nil->attrs.insert("__str__", new model::NativeFunction(model::nil_str));
 
     // Int 类型魔法方法
     model::based_int->attrs.insert("__add__", new model::NativeFunction(model::int_add));
@@ -91,6 +93,7 @@ void Vm::entry_builtins() {
     model::based_int->attrs.insert("__call__", new model::NativeFunction(model::int_call));
     model::based_int->attrs.insert("__bool__", new model::NativeFunction(model::int_bool));
     model::based_int->attrs.insert("__hash__", new model::NativeFunction(model::int_hash));
+    model::based_int->attrs.insert("__str__", new model::NativeFunction(model::int_str));
 
     // Decimal类型魔术方法
     model::based_decimal->attrs.insert("__add__", new model::NativeFunction(model::decimal_add));
@@ -105,21 +108,15 @@ void Vm::entry_builtins() {
     model::based_decimal->attrs.insert("__call__", new model::NativeFunction(model::decimal_call));
     model::based_decimal->attrs.insert("__bool__", new model::NativeFunction(model::decimal_bool));
     model::based_decimal->attrs.insert("__hash__", new model::NativeFunction(model::decimal_hash));
+    model::based_decimal->attrs.insert("__str__", new model::NativeFunction(model::decimal_str));
     model::based_decimal->attrs.insert("safe_div", new model::NativeFunction(model::decimal_safe_div));
-
-    // Rational 类型魔法方法
-    model::based_rational->attrs.insert("__add__", new model::NativeFunction(model::rational_add));
-    model::based_rational->attrs.insert("__sub__", new model::NativeFunction(model::rational_sub));
-    model::based_rational->attrs.insert("__mul__", new model::NativeFunction(model::rational_mul));
-    model::based_rational->attrs.insert("__div__", new model::NativeFunction(model::rational_div));
-    model::based_rational->attrs.insert("__gt__", new model::NativeFunction(model::rational_gt));
-    model::based_rational->attrs.insert("__lt__", new model::NativeFunction(model::rational_lt));
-    model::based_rational->attrs.insert("__eq__", new model::NativeFunction(model::rational_eq));
 
     // Dictionary 类型魔法方法
     model::based_dict->attrs.insert("__add__", new model::NativeFunction(model::dict_add));
     model::based_dict->attrs.insert("__contains__", new model::NativeFunction(model::dict_contains));
     model::based_dict->attrs.insert("__getitem__", new model::NativeFunction(model::dict_getitem));
+    model::based_dict->attrs.insert("__str__", new model::NativeFunction(model::dict_str));
+    model::based_dict->attrs.insert("__dstr__", new model::NativeFunction(model::dict_dstr));
     model::based_dict->attrs.insert("__setitem__", new model::NativeFunction(model::dict_setitem));
 
     // List 类型魔法方法
@@ -131,6 +128,8 @@ void Vm::entry_builtins() {
     model::based_list->attrs.insert("__next__", new model::NativeFunction(model::list_next));
     model::based_list->attrs.insert("__getitem__", new model::NativeFunction(model::list_getitem));
     model::based_list->attrs.insert("__setitem__", new model::NativeFunction(model::list_setitem));
+    model::based_list->attrs.insert("__str__", new model::NativeFunction(model::list_str));
+    model::based_list->attrs.insert("__dstr__", new model::NativeFunction(model::list_dstr));
 
     model::based_list->attrs.insert("append", new model::NativeFunction(model::list_append));
     model::based_list->attrs.insert("contains", new model::NativeFunction(model::list_contains));
@@ -153,6 +152,10 @@ void Vm::entry_builtins() {
     model::based_str->attrs.insert("__bool__", new model::NativeFunction(model::str_bool));
     model::based_str->attrs.insert("__hash__", new model::NativeFunction(model::str_hash));
     model::based_str->attrs.insert("__getitem__", new model::NativeFunction(model::str_getitem));
+    model::based_str->attrs.insert("__str__", new model::NativeFunction(model::str_str));
+    model::based_str->attrs.insert("__dstr__", new model::NativeFunction(model::str_dstr));
+
+
     model::based_str->attrs.insert("contains", new model::NativeFunction(model::str_contains));
     model::based_str->attrs.insert("count", new model::NativeFunction(model::str_count));
     model::based_str->attrs.insert("foreach", new model::NativeFunction(model::str_foreach));
@@ -166,7 +169,7 @@ void Vm::entry_builtins() {
     model::based_str->attrs.insert("to_upper", new model::NativeFunction(model::str_to_upper));
 
 
-    model::based_error->attrs.insert("__call__", new model::NativeFunction([](model::Object* self, model::List* args) -> model::Object* {
+    model::based_error->attrs.insert("__call__", new model::NativeFunction([](model::Object* self, model::List* args) {
         assert( args->val.size() == 2);
         auto err_name = args->val[0];
         auto err_msg = args->val[1];
@@ -174,14 +177,43 @@ void Vm::entry_builtins() {
         auto err = new model::Error(gen_pos_info());
         err->attrs.insert("__name__", err_name);
         err->attrs.insert("__msg__", err_msg);
-        std::cout << std::format("throw Err pos f{} c{} l{}",
-                    err->positions.back().first, err->positions.back().second.col_start, err->positions.back().second.lno_start) << std::endl;
+        // std::cout << std::format("throw Err pos f{} c{} l{}",
+        //             err->positions.back().first, err->positions.back().second.col_start, err->positions.back().second.lno_start) << std::endl;
         return err;
     }));
 
+    model::based_error->attrs.insert("__str__", new model::NativeFunction([](model::Object* self, model::List* args) {
+        return model::create_str("Error");
+    }));
+
+    model::based_module->attrs.insert("__str__", new model::NativeFunction([](model::Object* self, model::List* args){
+        auto self_mod = dynamic_cast<model::Module*>(self);
+        return model::create_str(
+            "<Module: path='" + self_mod->path + "', attr=" + self_mod->attrs.to_string() + ", at " + ptr_to_string(self_mod) + ">"
+        );
+    }));
+
+    model::based_function->attrs.insert("__str__", new model::NativeFunction([](model::Object* self, model::List* args){
+       auto self_fn = dynamic_cast<model::Function*>(self);
+       return model::create_str(
+           "<Function: path='" + self_fn->name + "', argc=" + std::to_string(self_fn->argc) + " at " + ptr_to_string(self_fn) + ">"
+       );
+   }));
+
+    model::based_native_function->attrs.insert("__str__", new model::NativeFunction([](model::Object* self, model::List* args){
+       auto self_nfn = dynamic_cast<model::NativeFunction*>(self);
+       return model::create_str(
+        "<NativeFunction" +
+            (self_nfn->name.empty()
+            ? ""
+            : ": path='" + self_nfn->name + "'"
+            )
+            + " at " + ptr_to_string(self_nfn) + ">"
+       );
+   }));
+
     builtins.insert("Int", model::based_int);
     builtins.insert("Bool", model::based_bool);
-    builtins.insert("__Rational", model::based_rational);
     builtins.insert("Decimal", model::based_decimal);
     builtins.insert("List", model::based_list);
     builtins.insert("Dict", model::based_dict);

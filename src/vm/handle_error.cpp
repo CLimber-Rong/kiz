@@ -53,8 +53,8 @@ std::pair<std::string, std::string> get_err_name_and_msg(const model::Object* er
     auto err_msg_it = err_obj->attrs.find("__msg__");
     assert(err_name_it != nullptr);
     assert(err_msg_it != nullptr);
-    auto err_name = err_name_it->value->debug_string();
-    auto err_msg = err_msg_it->value->debug_string();
+    auto err_name = Vm::obj_to_str(err_name_it->value);
+    auto err_msg = Vm::obj_to_str(err_msg_it->value);
     return {err_name, err_msg};
 }
 
@@ -67,15 +67,15 @@ void Vm::exec_ENTER_TRY(const Instruction& instruction) {
 
 
 void Vm::exec_LOAD_ERROR(const Instruction& instruction) {
-    std::cout << "loading curr error " + curr_error->debug_string() << std::endl;
-    std::cout << call_stack.back()->pc << std::endl;
+    // std::cout << "loading curr error " + curr_error->debug_string() << std::endl;
+    // std::cout << call_stack.back()->pc << std::endl;
     assert(curr_error != nullptr);
     op_stack.push(curr_error);
 }
 
 void Vm::exec_THROW(const Instruction& instruction) {
     DEBUG_OUTPUT("exec throw...");
-    std::cout << "top " << op_stack.top()->debug_string() << std::endl;
+    // std::cout << "top " << op_stack.top()->debug_string() << std::endl;
     const auto top = op_stack.top();
     curr_error = top;
     op_stack.pop();
@@ -89,7 +89,7 @@ void Vm::exec_JUMP_IF_FINISH_HANDLE_ERROR(const Instruction& instruction) {
     bool finish_handle_error = call_stack.back()->try_blocks.back().handle_error;
     // 弹出TryFrame
     call_stack.back()->try_blocks.pop_back();
-    std::cout << "Jump if finish handle error: finish_handle_error = " << finish_handle_error << std::endl;
+    // std::cout << "Jump if finish handle error: finish_handle_error = " << finish_handle_error << std::endl;
     if (finish_handle_error) {
         call_stack.back()->pc = instruction.opn_list[0];
     } else {
@@ -107,9 +107,9 @@ void Vm::exec_MARK_HANDLE_ERROR(const Instruction& instruction) {
 void Vm::exec_IS_CHILD(const Instruction& instruction) {
     auto b = fetch_one_from_stack_top();
     auto a = fetch_one_from_stack_top();
-    std::cout << "a is " << a->debug_string() << std::endl;
-    std::cout << "b is " << b->debug_string() << std::endl;
-    std::cout << "ischild(a,b)" << std::endl;
+    // std::cout << "a is " << a->debug_string() << std::endl;
+    // std::cout << "b is " << b->debug_string() << std::endl;
+    // std::cout << "ischild(a,b)" << std::endl;
     op_stack.emplace(builtin::check_based_object(a, b));
 }
 
@@ -126,20 +126,20 @@ void Vm::handle_throw() {
         if (!frame->try_blocks.empty()) {
             target_frame = frame;
             auto try_frame = frame->try_blocks.back();
-            std::cout << "try_frame.handle_error: " << try_frame.handle_error << std::endl;
+            // std::cout << "try_frame.handle_error: " << try_frame.handle_error << std::endl;
             if (try_frame.handle_error) {
                 // 该情况下, error从catch中抛出
                 // 改为从 finally 开始执行
                 target_pc = try_frame.finally_start;
-                std::cout << "find finally pc!" << target_pc << std::endl;
+                // std::cout << "find finally pc!" << target_pc << std::endl;
                 // 重置错误处理状态, 使其在finally后可以rethrow
                 frame->try_blocks.back().handle_error = false;
-                std::cout << "change try_frame.handle_error: " << frame->try_blocks.back().handle_error << std::endl;
+                // std::cout << "change try_frame.handle_error: " << frame->try_blocks.back().handle_error << std::endl;
                 break;
             } else {
                 target_pc = try_frame.catch_start;
                 assert(target_pc != 0);
-                std::cout << "find catch pc!" << target_pc << std::endl;
+                // std::cout << "find catch pc!" << target_pc << std::endl;
                 break;
             }
         }
