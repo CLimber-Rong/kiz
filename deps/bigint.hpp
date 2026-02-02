@@ -319,44 +319,16 @@ public:
 
     // ========================= 核心运算：减法 =========================
     BigInt operator-(const BigInt& other) const {
-        // 特殊情况：减自己 → 0
+        // 特殊情况：减自己 → 0（保留，提升效率）
         if (*this == other) {
-            return BigInt(0);
+            return {0};
         }
-
-        BigInt res;
-        res.digits_.clear();
-        res.is_negative_ = false;
-
-        // 确定被减数和减数（确保被减数绝对值 >= 减数绝对值）
-        const BigInt* minuend = this;  // 被减数
-        const BigInt* subtrahend = &other; // 减数
-        if (abs_less(other)) {
-            minuend = &other;
-            subtrahend = this;
-            res.is_negative_ = true; // 结果为负
-        }
-
-        // 绝对值相减（大减小）
-        uint32_t borrow = 0; // 借位
-        for (size_t i = 0; i < minuend->digits_.size(); ++i) {
-            // 取当前位（减数不足补0）
-            uint32_t a = minuend->digits_[i];
-            uint32_t b = (i < subtrahend->digits_.size()) ? subtrahend->digits_[i] : 0;
-            // 处理借位：当前位不够减，向前借1（变成10+当前位）
-            a -= borrow;
-            borrow = 0;
-            if (a < b) {
-                a += 10;
-                borrow = 1;
-            }
-            uint32_t diff = a - b;
-            res.digits_.push_back(static_cast<uint8_t>(diff));
-        }
-
-        res.trim_leading_zeros();
-        return res;
+        // 数学本质：a - b = a + (-b) （核心修复，复用加法的正确逻辑）
+        BigInt other_neg = other;       // 复制被减数
+        other_neg.is_negative_ = !other_neg.is_negative_; // 取反被减数的符号（得到相反数）
+        return *this + other_neg;       // 调用正确的加法运算符，完成所有计算
     }
+
 
     BigInt& operator-=(const BigInt& other) {
         *this = *this - other;
@@ -366,7 +338,7 @@ public:
     // ========================= 核心运算：乘法 =========================
     BigInt operator*(const BigInt& other) const {
         if ((digits_.size() == 1 && digits_[0] == 0) || (other.digits_.size() == 1 && other.digits_[0] == 0)) {
-            return BigInt(0);
+            return {0};
         }
 
         BigInt res;

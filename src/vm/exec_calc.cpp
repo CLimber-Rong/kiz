@@ -67,11 +67,8 @@ void Vm::exec_POW(const Instruction& instruction) {
 }
 
 void Vm::exec_NEG(const Instruction& instruction) {
-    const auto raw_call_stack_count = call_stack.size();
-
     DEBUG_OUTPUT("exec neg...");
-    auto a = op_stack.top();
-    op_stack.pop();
+    auto a = fetch_one_from_stack_top();
     handle_call(get_attr(a, "__neg__"), new model::List({}), a);
 }
 
