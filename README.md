@@ -4,7 +4,7 @@
 <h1> kiz v0.5.0 🎉</h1>
 </div>
 
-📌 **现状: 开发中...**
+📌 **现状: 预发布正式版本(2026.1)...**
 
 ## 语言核心定位
 kiz-lang 是一门 **面向对象（原型链模型）、强类型+动态类型(鸭子类型)** 的轻量化脚本语言，**使用C++开发**，采用「半编译半解析」架构，内置**栈式虚拟机**（VM）与基于引用计数（atomic reference count）的对象模型。
@@ -15,26 +15,18 @@ kiz-lang 是一门 **面向对象（原型链模型）、强类型+动态类型(
 - int 类型为无限精度整数
 - 小数类型为Decimal精准小数
 - 字符串类型为utf-8字符串
-
-- 📚 文档完善 :
-
-    - kiz2026.1文档:
-
-     [https://github.com/kiz-committee/Kiz-Standard-Documents](https://github.com/kiz-committee/Kiz-Standard-Documents)
 - 🪄 多范式兼容：支持OOP、FP等主流编程范式
-- 🔅 语法极简：关键字集高度精简，仅包含：
-```kiz
-False Nil True and break catch
-else end finally fn for
-global if import in is
-next nonlocal not
-object or return this
-throw try while
-```
+- 🔅 语法极简：关键字集高度精简，
 - ✅ 规范友好：中文注释+统一命名规范
 - ✔️ 开发者友好：低门槛快速上手
-- 🔆 结构
-    
+
+## 📚 文档完善 :
+
+    - kiz2026.1 特性文档:
+
+     [https://github.com/kiz-committee/Kiz-Standard-Documents](https://github.com/kiz-committee/Kiz-Standard-Documents)
+
+## 🔆 结构
     - **ArgParser**: 解析控制台参数
     - **REPL**: 交互式环境
     - **Lexer**: 把源代码解析为token流(基于FSM)
@@ -46,8 +38,9 @@ throw try while
     - **SrcManager&ErrorReporter**: kiz代码源文件与TraceBack报错器
     - **Depends**: 非业务工具类(Bigint, Decimal, U8String, HashMap, Dict)
 
-- 📃 TODO: 
+## 📃 TODO: 
+    - **fixme** 修复for-loop的bug
+    - **feature** 完善Decimal类型的方法
     - **fixme** 确保引用计数正确
     - **fixme** 所有报错使用util::err_reporter函数代替现在临时的assert
-    - **fixme(maybe has big change)** 统一报错和DEBUG信息和输出信息为标准英文
     
