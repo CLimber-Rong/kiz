@@ -4,10 +4,14 @@
 <h1> kiz v0.5.0 🎉</h1>
 </div>
 
-📌 **现状: 预发布正式版本(2026.1)...**
+📌 **现状: 修复bug与预发布正式版本(2026.1)...**
 
 ## 语言核心定位
-kiz-lang 是一门 **面向对象（原型链模型）、强类型+动态类型(鸭子类型)** 的轻量化脚本语言，**使用C++开发**，采用「半编译半解析」架构，内置**栈式虚拟机**（VM）与基于引用计数（atomic reference count）的对象模型。
+kiz-lang 是一门 **面向对象（原型链模型）、强类型+动态类型(鸭子类型)** 的轻量化脚本语言
+
+**使用C++开发**，采用「半编译半解析」架构，内置**栈式虚拟机**（VM）
+
+内存安全，并有基于原子引用计数（atomic reference count）的对象模型。
 
 ## 核心设计亮点
 - 通过对象的 `__parent__` 属性绑定上级对象，实现原型链继承
@@ -16,16 +20,16 @@ kiz-lang 是一门 **面向对象（原型链模型）、强类型+动态类型(
 - 小数类型为Decimal精准小数
 - 字符串类型为utf-8字符串
 - 🪄 多范式兼容：支持OOP、FP等主流编程范式
-- 🔅 语法极简：关键字集高度精简，
+- 🔅 语法极简：关键字集高度精简
 - ✅ 规范友好：中文注释+统一命名规范
 - ✔️ 开发者友好：低门槛快速上手
 
 ## 📚 文档完善
 
-- kiz2026.1 特性文档:
-[https://github.com/kiz-committee/Kiz-Standard-Documents](https://github.com/kiz-committee/Kiz-Standard-Documents)
+- **kiz 文档集**:
+[点我查看](https://github.com/kiz-committee/Kiz-Standard-Documents)
 
-## 🔆 结构
+## 🔆 项目结构
 
 - **ArgParser**: 解析控制台参数
 - **REPL**: 交互式环境
@@ -38,7 +42,7 @@ kiz-lang 是一门 **面向对象（原型链模型）、强类型+动态类型(
 - **SrcManager&ErrorReporter**: kiz代码源文件与TraceBack报错器
 - **Depends**: 非业务工具类(Bigint, Decimal, U8String, HashMap, Dict)
 
-## 📃 TODO: 
+## 📃 TODO
 
 - **fixme** 修复for-loop的bug
 - **feature** 完善Decimal类型的方法
