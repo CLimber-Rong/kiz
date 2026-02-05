@@ -209,9 +209,9 @@ Object* decimal_gt(Object* self, const List* args) {
     }
     // 与Decimal比较
     else if (auto another_dec = dynamic_cast<Decimal*>(args->val[0])) {
-        std::cout << self_dec->val.to_string() << std::endl;
-        std::cout << another_dec->val.to_string() << std::endl;
-        std::cout << (self_dec->val > another_dec->val) << std::endl;
+        // std::cout << self_dec->val.to_string() << std::endl;
+        // std::cout << another_dec->val.to_string() << std::endl;
+        // std::cout << (self_dec->val > another_dec->val) << std::endl;
         return load_bool(self_dec->val > another_dec->val);
     }
     // 仅允许Int/Decimal

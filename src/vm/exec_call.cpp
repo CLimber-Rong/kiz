@@ -15,9 +15,17 @@ bool Vm::is_true(model::Object* obj) {
         return false;
     }
 
-    call_method(obj, "__bool__", new model::List({}));
+    model::List* args_list = model::cast_to_list(model::create_list({}));
+    call_method(obj, "__bool__", args_list);
     auto result = fetch_one_from_stack_top();
-    return is_true(result);
+    bool ret = is_true(result);
+
+    // ==| IMPORTANT |==
+    // 使用完毕后释放临时参数列表
+    args_list->del_ref();
+    // 释放递归调用的result对象
+    result->del_ref();
+    return ret;
 }
 
 
@@ -45,15 +53,13 @@ void Vm::handle_call(model::Object* func_obj, model::Object* args_obj, model::Ob
         DEBUG_OUTPUT("success to get the result of NativeFunction");
 
         // 管理返回值引用计数：返回值压栈前必须 make_ref
-        if (return_val != nullptr) {
-            return_val->make_ref();
-        } else {
+        if (!return_val){
             // 若返回空，默认压入 Nil（避免栈异常）
-            return_val = model::load_nil();
+            return_val = model::unique_nil;
         }
 
         // 返回值压入操作数栈
-        op_stack.push(return_val);
+        push_to_stack(return_val);
 
         DEBUG_OUTPUT("ok to call NativeFunction...");
         DEBUG_OUTPUT("NativeFunction return: " + return_val->debug_string());
@@ -76,19 +82,23 @@ void Vm::handle_call(model::Object* func_obj, model::Object* args_obj, model::Ob
 
         // 创建新调用帧
 
-        auto new_frame = std::make_shared<CallFrame>(CallFrame{
+        auto new_frame = std::make_shared<CallFrame>(
              func->name,
 
              func,   // owner
              dep::HashMap<model::Object*>(), // 初始空局部变量表
 
             0,                               // 程序计数器初始化为0（从第一条指令开始执行）
-            call_stack.back()->pc + 1,   // 执行完所有指令后返回的位置（指令池末尾）
-            func->code,                 // 关联当前模块的CodeObject
+            call_stack.back()->pc + 1,       // 执行完所有指令后返回的位置（指令池末尾）
+            func->code,                      // 关联当前模块的CodeObject
 
-            {},
-            {}
-        });
+            std::vector<TryFrame>{},
+
+            std::vector<model::Object*>{}
+        );
+
+        new_frame->owner->make_ref();
+        new_frame->code_object->make_ref();
 
         // 储存self
         if (self and self->get_type() != model::Object::ObjectType::OT_Module) {
@@ -233,18 +243,18 @@ void Vm::exec_CALL(const Instruction& instruction) {
     }
 
     // 弹出栈顶元素 : 函数对象
-    model::Object* func_obj = op_stack.top();
-    op_stack.pop();
+    model::Object* func_obj = fetch_one_from_stack_top();
     func_obj->make_ref();  // 临时持有函数对象，避免中途被释放
 
     // 弹出栈顶-1元素 : 参数列表
-    model::Object* args_obj = op_stack.top();
-    op_stack.pop();
+    model::Object* args_obj = fetch_one_from_stack_top();
 
     DEBUG_OUTPUT("弹出函数对象: " + func_obj->debug_string());
     DEBUG_OUTPUT("弹出参数列表: " + args_obj->debug_string());
     handle_call(func_obj, args_obj);
 
+    // ==| IMPORTANT |==
+    func_obj->del_ref(); // 修复：释放临时持有引用
 }
 
 void Vm::exec_CALL_METHOD(const Instruction& instruction) {
@@ -281,9 +291,9 @@ void Vm::exec_RET(const Instruction& instruction) {
     // 兼容顶层调用帧返回
     if (call_stack.size() < 2) {
         if (!op_stack.empty()) {
-            op_stack.pop(); // 清理栈顶返回值
+            fetch_one_from_stack_top();
         }
-        call_stack.pop_back(); // 弹出最后一个帧
+        call_stack.pop_back();
         return;
     }
 
@@ -291,17 +301,13 @@ void Vm::exec_RET(const Instruction& instruction) {
     call_stack.pop_back();
 
     CallFrame* caller_frame = call_stack.back().get();
+    model::Object* return_val = model::unique_nil;
 
-    model::Object* return_val = model::load_nil();
-    return_val->make_ref();
     if (!op_stack.empty()) {
-        return_val->del_ref();
-        return_val = op_stack.top();
-        op_stack.pop();
-        return_val->make_ref();
+        return_val = fetch_one_from_stack_top(); // 释放持有
     }
 
     caller_frame->pc = curr_frame->return_to_pc;
-    op_stack.push(return_val);
+    push_to_stack(return_val);
 }
 }

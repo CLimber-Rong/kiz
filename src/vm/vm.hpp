@@ -17,17 +17,13 @@
 
 #include "../kiz.hpp"
 #include "../error/error_reporter.hpp"
-
-namespace model {
-class Error;
-}
-
 namespace model {
 class Module;
 class CodeObject;
 class Object;
 class List;
 class Int;
+class Error;
 }
 
 namespace kiz {
@@ -60,6 +56,8 @@ struct CallFrame {
     std::vector<TryFrame> try_blocks;
 
     std::vector<model::Object*> iters;
+
+    ~CallFrame();
 };
 
 class Vm {
@@ -70,6 +68,7 @@ public:
     static std::stack<model::Object*> op_stack;
     static std::vector<std::shared_ptr<CallFrame>> call_stack;
     static model::Int* small_int_pool[201];
+    static std::vector<model::Object*> const_pool;
 
     static dep::HashMap<model::Object*> builtins;
 
@@ -95,8 +94,7 @@ public:
 
     static CallFrame* fetch_curr_call_frame();
     static model::Object* fetch_one_from_stack_top();
-    static auto fetch_two_from_stack_top(const std::string& op_name)
-        -> std::tuple<model::Object*, model::Object*>;
+    static void push_to_stack(model::Object* obj);
 
     static model::Object* get_attr(const model::Object* obj, const std::string& attr);
     static bool is_true(model::Object* obj);

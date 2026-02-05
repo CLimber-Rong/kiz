@@ -73,9 +73,16 @@ std::streamsize util_write(const std::string& path,
 
 model::Object* init_module(model::Object* self, const model::List* args) {
     auto mod = new model::Module("io_lib");
+    mod->make_ref(); // 修复1：Module创建后立即计数
 
-    mod->attrs.insert("fast_read",  new model::NativeFunction(fast_read));
-    mod->attrs.insert("fast_write",  new model::NativeFunction(fast_write));
+    // 修复2：NativeFunction创建后立即计数，容器合法持有
+    auto fast_read_fun = new model::NativeFunction(fast_read);
+    fast_read_fun->make_ref();
+    auto fast_write_fun = new model::NativeFunction(fast_write);
+    fast_write_fun->make_ref();
+
+    mod->attrs.insert("fast_read", fast_read_fun);
+    mod->attrs.insert("fast_write", fast_write_fun);
 
     return mod;
 }
@@ -94,12 +101,14 @@ model::Object* fast_read(model::Object* self, const model::List* args) {
     auto content = std::string(std::istreambuf_iterator(file),
                        std::istreambuf_iterator<char>()
     );
-    return new model::String(content);
+    auto str_obj = new model::String(content);
+    str_obj->make_ref(); // 修复3：String创建后立即计数
+    return str_obj;
 }
 
 model::Object* fast_write(model::Object* self, const model::List* args) {
     auto args_vec = args->val;
-    assert(args_vec.size() != 3);
+    assert(args_vec.size() == 3); // 修复：修正断言逻辑，要求传入3个参数
 
     auto path_str = dynamic_cast<model::String*>(args_vec[0]);
     assert(path_str != nullptr);
@@ -112,7 +121,7 @@ model::Object* fast_write(model::Object* self, const model::List* args) {
 
     util_write(path_str->val, text_str->val, start_idx->val.to_unsigned_long_long());
 
-    return model::load_nil();
+    return model::load_nil(); // 无错，load_nil()内部已计数
 }
 
 }

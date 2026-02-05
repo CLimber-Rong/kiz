@@ -10,6 +10,7 @@
 #include <atomic>
 #include <functional>
 #include <iomanip>
+#include <ranges>
 #include <utility>
 
 #include "../kiz.hpp"
@@ -82,12 +83,15 @@ public:
     }
 
     void make_ref() {
+        std::cout << "adding refc: " << this->debug_string() << " " << refc_  << " -> " << refc_+1 << std::endl;
         refc_.fetch_add(1, std::memory_order_relaxed);
     }
     void del_ref() {
+        std::cout << "deling refc: " << this->debug_string() << " " << refc_  << " -> " << refc_-1 << std::endl;
         const size_t old_ref = refc_.fetch_sub(1, std::memory_order_acq_rel);
 
         if (old_ref == 1) {
+            std::cout << "deling object " << this->debug_string() << std::endl;
             delete this;
         }
     }
@@ -96,14 +100,12 @@ public:
         return "<Object at " + ptr_to_string(this) + ">";
     }
 
-    Object () {
-        make_ref();
-    }
+    Object () {}
 
     virtual ~Object() {
         auto kv_list = attrs.to_vector();
-        for (auto& [key, obj] : kv_list) {
-            if (obj != nullptr) obj->del_ref();
+        for (auto& obj : kv_list | std::views::values) {
+            if (obj) obj->del_ref();
         }
     }
 };
@@ -127,27 +129,17 @@ class List;
 class CodeObject : public Object {
 public:
     std::vector<kiz::Instruction> code;
-    std::vector<Object*> consts;
     std::vector<std::string> names;
 
     static constexpr ObjectType TYPE = ObjectType::OT_CodeObject;
     [[nodiscard]] ObjectType get_type() const override { return TYPE; }
 
     explicit CodeObject(const std::vector<kiz::Instruction>& code,
-        const std::vector<Object*>& consts,
         const std::vector<std::string>& names
-    ) : code(code), consts(consts), names(names) {}
+    ) : code(code), names(names) {}
 
     [[nodiscard]] std::string debug_string() const override {
         return "<CodeObject at " + ptr_to_string(this) + ">";
-    }
-
-    ~CodeObject() override {
-        for (Object* const_obj : consts) {
-            if (const_obj != nullptr) {
-                const_obj->del_ref();
-            }
-        }
     }
 };
 
@@ -373,12 +365,15 @@ inline auto unique_false = new Bool(false);
 inline auto unique_true = new Bool(true);
 
 inline auto load_nil() {
+    unique_nil->make_ref();
     return unique_nil;
 }
 inline auto load_false() {
+    unique_false->make_ref();
     return unique_false;
 }
 inline auto load_true() {
+    unique_true->make_ref();
     return unique_true;
 }
 
@@ -389,21 +384,30 @@ inline auto load_bool(bool b) {
 
 inline auto create_int(dep::BigInt n) {
     auto o = new Int(std::move(n));
+    o->make_ref();
     return o;
 }
 
 inline auto create_str(std::string n) {
     auto o = new String(std::move(n));
+    o->make_ref();
     return o;
 }
 
 inline auto create_decimal(dep::Decimal n) {
     auto o = new Decimal(std::move(n));
+    o->make_ref();
     return o;
 }
 
 inline auto create_list(std::vector<Object*> n) {
     auto o = new List(std::move(n));
+    o->make_ref();
+    return o;
+}
+
+inline auto create_nfunc(std::function<Object*(Object*, List*)> func) {
+    auto o = new NativeFunction(func);
     o->make_ref();
     return o;
 }

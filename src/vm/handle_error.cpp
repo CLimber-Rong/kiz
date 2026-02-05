@@ -6,6 +6,7 @@
 namespace kiz {
 
 // -------------------------- 异常处理 --------------------------
+// 辅助函数
 auto Vm::gen_pos_info() -> std::vector<std::pair<std::string, err::PositionInfo>> {
     size_t frame_index = 0;
     std::vector<std::pair<std::string, err::PositionInfo>> positions;
@@ -34,14 +35,21 @@ auto Vm::gen_pos_info() -> std::vector<std::pair<std::string, err::PositionInfo>
 }
 
 void Vm::instruction_throw(const std::string& name, const std::string& content) {
-    const auto err_name = new model::String(name);
-    const auto err_msg = new model::String(content);
-
+    // 创建即计数
+    const auto err_name = model::create_str(name);
+    const auto err_msg = model::create_str(content);
     const auto err_obj = new model::Error(gen_pos_info());
+    err_obj->make_ref();
+
     err_obj->attrs.insert("__name__", err_name);
     err_obj->attrs.insert("__msg__", err_msg);
-    DEBUG_OUTPUT("err_obj pos size = "+std::to_string(err_obj->positions.size()));
-    curr_error = err_obj;
+
+    // 替换全局curr_error前，释放旧错误对象
+    if (curr_error) {
+        // ==| IMPORTANT |==
+        curr_error->del_ref();
+    }
+    curr_error = err_obj; // 全局持有，已提前make_ref()
     handle_throw();
 }
 
@@ -67,19 +75,21 @@ void Vm::exec_ENTER_TRY(const Instruction& instruction) {
 
 
 void Vm::exec_LOAD_ERROR(const Instruction& instruction) {
-    // std::cout << "loading curr error " + curr_error->debug_string() << std::endl;
-    // std::cout << call_stack.back()->pc << std::endl;
     assert(curr_error != nullptr);
-    op_stack.push(curr_error);
+    push_to_stack(curr_error);
 }
 
 void Vm::exec_THROW(const Instruction& instruction) {
     DEBUG_OUTPUT("exec throw...");
-    // std::cout << "top " << op_stack.top()->debug_string() << std::endl;
-    const auto top = op_stack.top();
-    curr_error = top;
-    op_stack.pop();
+    const auto top = fetch_one_from_stack_top();
+    top->make_ref();
 
+    // 替换前释放旧错误对象
+    if (curr_error) {
+        // ==| IMPORTANT |==
+        curr_error->del_ref();
+    }
+    curr_error = top;
     handle_throw();
 }
 
@@ -107,10 +117,10 @@ void Vm::exec_MARK_HANDLE_ERROR(const Instruction& instruction) {
 void Vm::exec_IS_CHILD(const Instruction& instruction) {
     auto b = fetch_one_from_stack_top();
     auto a = fetch_one_from_stack_top();
-    // std::cout << "a is " << a->debug_string() << std::endl;
-    // std::cout << "b is " << b->debug_string() << std::endl;
-    // std::cout << "ischild(a,b)" << std::endl;
-    op_stack.emplace(builtin::check_based_object(a, b));
+    push_to_stack(builtin::check_based_object(a, b));
+    // 释放使用后的a/b对象，计数对称
+    a->del_ref();
+    b->del_ref();
 }
 
 void Vm::handle_throw() {

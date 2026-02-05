@@ -30,17 +30,47 @@ model::Int* Vm::small_int_pool[201] {};
 bool Vm::running = false;
 std::string Vm::file_path;
 model::Object* Vm::curr_error {};
+std::vector<model::Object*> Vm::const_pool{};
 dep::HashMap<model::Object*> Vm::std_modules {};
+
+CallFrame::~CallFrame() {
+    // ==| IMPORTANT |==
+    // 释放owner
+    if (owner) owner->del_ref();
+    // 释放code_object
+    if (code_object) code_object->del_ref();
+    // 释放locals中所有对象
+    auto locals_kv = locals.to_vector();
+    for (auto& [_, val] : locals_kv) {
+        if (val) val->del_ref();
+    }
+    // 释放iters中所有对象
+    for (auto& obj : iters) {
+        if (obj) obj->del_ref();
+    }
+}
 
 
 Vm::Vm(const std::string& file_path_) {
     file_path = file_path_;
-    model::unique_nil->make_ref();
-    model::unique_true->make_ref();
-    model::unique_false->make_ref();
     DEBUG_OUTPUT("entry builtin functions...");
+    model::based_obj->make_ref();
+    model::based_list->make_ref();
+    model::based_function->make_ref();
+    model::based_dict->make_ref();
+    model::based_int->make_ref();
+    model::based_bool->make_ref();
+    model::based_nil->make_ref();
+    model::based_str->make_ref();
+    model::based_native_function->make_ref();
+    model::based_error->make_ref();
+    model::based_decimal->make_ref();
+    model::based_module->make_ref();
+    model::stop_iter_signal->make_ref();
     for (dep::BigInt i = 0; i < 201; i+= 1) {
-        small_int_pool[i.to_unsigned_long_long()] = new model::Int{i};
+        auto int_obj = new model::Int{i};
+        int_obj->make_ref();
+        small_int_pool[i.to_unsigned_long_long()] = int_obj;
     }
     entry_builtins();
     entry_std_modules();
@@ -53,6 +83,7 @@ void Vm::set_main_module(model::Module* src_module) {
     assert(src_module->code != nullptr && "Vm::run_module: 模块的CodeObject未初始化（code为nullptr）");
     // 注册为main module
     main_module = src_module;
+    src_module->make_ref();
     // 创建模块级调用帧（CallFrame）：模块是顶层执行单元，对应一个顶层调用帧
     auto module_call_frame = std::make_shared<CallFrame>(CallFrame{
         src_module->path,                // 调用帧名称与模块名一致（便于调试）
@@ -122,8 +153,18 @@ CallFrame* Vm::fetch_curr_call_frame() {
 
 model::Object* Vm::fetch_one_from_stack_top() {
     const auto stack_top = op_stack.empty() ? nullptr : op_stack.top();
-    if (stack_top) op_stack.pop();
+    if (stack_top) {
+        // ==| IMPORTANT |==
+        stack_top->del_ref();
+        op_stack.pop();
+    }
     return stack_top;
+}
+
+void Vm::push_to_stack(model::Object* obj) {
+    if (obj == nullptr) return;
+    obj->make_ref(); // 栈成为新持有者，增加引用计数
+    op_stack.push(obj);
 }
 
 void Vm::set_and_exec_curr_code(const model::CodeObject* code_object) {
@@ -136,18 +177,21 @@ void Vm::set_and_exec_curr_code(const model::CodeObject* code_object) {
 
     // 获取全局模块级调用帧（REPL 共享同一个帧）
     auto& curr_frame = *call_stack.back();
+    // 对原有CodeObject调用del_ref(), 释放CallFrame的持有权
+    if (curr_frame.code_object) {
+        // ==| IMPORTANT |==
+        curr_frame.code_object->del_ref();
+    }
 
-    // ========== 覆盖：常量池 ==========
-    curr_frame.code_object->consts = code_object->consts;
+    // 创建const的CodeObject副本，避免直接修改const对象
+    auto new_code_obj = new model::CodeObject(code_object->code, code_object->names);
+    new_code_obj->make_ref(); // ：CallFrame持有新对象，增加引用计数
+    curr_frame.code_object = new_code_obj;
 
-    // ========== 覆盖：名称表 ==========
-    curr_frame.code_object->names = code_object->names; // 覆盖 CodeObject 的 names
+    // 重置名称表
+    curr_frame.code_object->names = code_object->names;
 
-    // ========== 覆盖：指令 ==========
-    curr_frame.code_object->code = code_object->code;
-    DEBUG_OUTPUT("set_and_exec_curr_code: 追加指令 ");
-
-    // ========== 执行指令 ==========
+    DEBUG_OUTPUT("set_and_exec_curr_code: 替换指令完成 ");
     curr_frame.pc = 0;
     exec_curr_code();
     DEBUG_OUTPUT("set_and_exec_curr_code: 执行新指令完成");
@@ -219,6 +263,7 @@ std::string Vm::obj_to_str(model::Object* for_cast_obj) {
     }
     auto res = fetch_one_from_stack_top();
     std::string val = model::cast_to_str(res)->val;
+
     return val;
 }
 

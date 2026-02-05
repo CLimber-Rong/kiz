@@ -172,7 +172,7 @@ void IRGenerator::gen_block(const BlockStmt* block) {
                 } else {
                     // 无返回值时压入Nil常量
                     auto* nil = model::load_nil();
-                    const size_t const_idx = get_or_add_const(curr_consts, nil);
+                    const size_t const_idx = get_or_add_const(nil);
                     curr_code_list.emplace_back(
                         Opcode::LOAD_CONST,
                         std::vector<size_t>{const_idx},

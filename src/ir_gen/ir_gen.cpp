@@ -13,6 +13,7 @@
 #include <cassert>
 
 #include "../kiz.hpp"
+#include "../vm/vm.hpp"
 #include "../op_code/opcode.hpp"
 
 namespace kiz {
@@ -27,13 +28,14 @@ size_t IRGenerator::get_or_add_name(std::vector<std::string>& names, const std::
 }
 
 // 辅助函数：获取常量在curr_const中的索引（不存在则添加）
-size_t IRGenerator::get_or_add_const(std::vector<model::Object*>& consts, model::Object* obj) {
-    const auto it = std::find(consts.begin(), consts.end(), obj);
-    if (it != consts.end()) {
-        return std::distance(consts.begin(), it);
+size_t IRGenerator::get_or_add_const(model::Object* obj) {
+    const auto it = std::find(Vm::const_pool.begin(), Vm::const_pool.end(), obj);
+    if (it != Vm::const_pool.end()) {
+        return std::distance(Vm::const_pool.begin(), it);
     }
-    consts.emplace_back(obj);
-    return consts.size() - 1;
+    obj->make_ref();
+    Vm::const_pool.emplace_back(obj);
+    return Vm::const_pool.size() - 1;
 }
 
 model::CodeObject* IRGenerator::gen(std::unique_ptr<BlockStmt> ast_into) {
@@ -63,21 +65,17 @@ model::CodeObject* IRGenerator::gen(std::unique_ptr<BlockStmt> ast_into) {
     // }
     // std::cout << "== End ==" << std::endl;
 
-    return new model::CodeObject(
+    auto code = new model::CodeObject(
         curr_code_list,
-        curr_consts,
         curr_names
     );
+    code->make_ref();
+    return code;
 }
 
 model::CodeObject* IRGenerator::make_code_obj() const {
     DEBUG_OUTPUT("making code object...");
     // 复制常量池（管理引用计数）
-    std::vector<model::Object*> consts;
-    for (auto* obj : curr_consts) {
-        obj->make_ref();
-        consts.emplace_back(obj);
-    }
 
     DEBUG_OUTPUT("make code obj : ir result");
     for (const auto& inst : curr_code_list) {
@@ -85,8 +83,9 @@ model::CodeObject* IRGenerator::make_code_obj() const {
     }
 
     const auto code_obj = new model::CodeObject(
-        curr_code_list, consts, curr_names
+        curr_code_list, curr_names
     );
+    code_obj->make_ref();
     return code_obj;
 }
 

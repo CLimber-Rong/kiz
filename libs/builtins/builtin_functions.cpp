@@ -106,14 +106,14 @@ model::Object* breakpoint(model::Object* self, const model::List* args) {
             ++j;
         }
 
-        std::cout << "\n";
-        std::cout << "Consts: ";
-        j = 1;
-        for (const auto c: frame->code_object->consts) {
-            std::cout << c;
-            if (j<frame->code_object->consts.size()) std::cout << ", ";
-            ++j;
-        }
+        // std::cout << "\n";
+        // std::cout << "Consts: ";
+        // j = 1;
+        // for (const auto c: frame->code_object->consts) {
+        //     std::cout << c;
+        //     if (j<frame->code_object->consts.size()) std::cout << ", ";
+        //     ++j;
+        // }
         std::cout << "\n\n";
         ++i;
     }

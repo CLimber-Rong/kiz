@@ -11,7 +11,7 @@ void IRGenerator::gen_expr(Expr* expr) {
         case AstType::NumberExpr: {
             // 生成LOAD_CONST指令（加载字面量常量）
             auto const_obj = make_int_obj(dynamic_cast<NumberExpr*>(expr));
-            size_t const_idx = get_or_add_const(curr_consts, const_obj);
+            size_t const_idx = get_or_add_const(const_obj);
             curr_code_list.emplace_back(
                 Opcode::LOAD_CONST,
                 std::vector{const_idx},
@@ -22,7 +22,7 @@ void IRGenerator::gen_expr(Expr* expr) {
         case AstType::StringExpr: {
             // 生成LOAD_CONST指令（加载字面量常量）
             auto const_obj = make_string_obj(dynamic_cast<StringExpr*>(expr));
-            size_t const_idx = get_or_add_const(curr_consts, const_obj);
+            size_t const_idx = get_or_add_const(const_obj);
             curr_code_list.emplace_back(
                 Opcode::LOAD_CONST,
                 std::vector{const_idx},
@@ -33,7 +33,7 @@ void IRGenerator::gen_expr(Expr* expr) {
         case AstType::DecimalExpr: {
             // 生成LOAD_CONST指令（加载字面量常量）
             auto const_obj = make_decimal_obj(dynamic_cast<DecimalExpr*>(expr));
-            size_t const_idx = get_or_add_const(curr_consts, const_obj);
+            size_t const_idx = get_or_add_const(const_obj);
             curr_code_list.emplace_back(
                 Opcode::LOAD_CONST,
                 std::vector{const_idx},
@@ -183,7 +183,7 @@ void IRGenerator::gen_expr(Expr* expr) {
             // 确保lambda有返回值（无显式返回则返回Nil）
             if (curr_code_list.empty() || curr_code_list.back().opc != Opcode::RET) {
                 const auto nil = model::load_nil();
-                const size_t nil_idx = get_or_add_const(curr_consts, nil);
+                const size_t nil_idx = get_or_add_const(nil);
                 curr_code_list.emplace_back(
                     Opcode::LOAD_CONST,
                     std::vector{nil_idx},
@@ -198,7 +198,6 @@ void IRGenerator::gen_expr(Expr* expr) {
 
             const auto code_obj = new model::CodeObject(
                 curr_code_list,
-                curr_consts,
                 curr_names
             );
 
@@ -216,7 +215,7 @@ void IRGenerator::gen_expr(Expr* expr) {
             curr_consts = save_const;
 
             // 加载lambda函数对象
-            const size_t fn_const_idx = get_or_add_const(curr_consts, lambda_fn);
+            const size_t fn_const_idx = get_or_add_const(lambda_fn);
             curr_code_list.emplace_back(
                 Opcode::LOAD_CONST,
                 std::vector{fn_const_idx},
@@ -226,7 +225,7 @@ void IRGenerator::gen_expr(Expr* expr) {
         }
         case AstType::NilExpr : {
             const auto nil = model::load_nil();
-            const size_t nil_idx = get_or_add_const(curr_consts, nil);
+            const size_t nil_idx = get_or_add_const(nil);
             curr_code_list.emplace_back(
                 Opcode::LOAD_CONST,
                 std::vector{nil_idx},
@@ -238,7 +237,7 @@ void IRGenerator::gen_expr(Expr* expr) {
             const auto bool_ast = dynamic_cast<BoolExpr*>(expr);
             assert(bool_ast!=nullptr);
             const auto bool_obj = model::load_bool(bool_ast->val);
-            const size_t bool_idx = get_or_add_const(curr_consts, bool_obj);
+            const size_t bool_idx = get_or_add_const(bool_obj);
             curr_code_list.emplace_back(
                 Opcode::LOAD_CONST,
                 std::vector{bool_idx},

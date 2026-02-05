@@ -142,7 +142,7 @@ void Vm::exec_IMPORT(const Instruction& instruction) {
     }
 
     bool file_in_path = false;
-    std::array<fs::path, 2> for_search_paths = {
+    std::array for_search_paths = {
         get_exe_abs_dir() / fs::path(file_path).parent_path() / fs::path(module_path),
         get_exe_abs_dir() / fs::path(module_path)
     };
@@ -162,13 +162,17 @@ void Vm::exec_IMPORT(const Instruction& instruction) {
         auto std_init_func = dynamic_cast<model::NativeFunction*>(std_init_it->value);
         assert(std_init_func != nullptr);
 
-        model::Object* return_val = std_init_func->func(std_init_func, new model::List({}));
-        assert(return_val != nullptr);
+        // 使用create_list创建临时参数，保存指针
+        model::List* args_list = model::cast_to_list(model::create_list({}));
+        model::Object* return_val = std_init_func->func(std_init_func, args_list);
+        // 使用后释放临时参数列表
+        args_list->del_ref();
 
+        assert(return_val != nullptr);
         auto module_obj = dynamic_cast<model::Module*>(return_val);
         assert(module_obj != nullptr);
 
-        module_obj->make_ref();
+        // 移除重复的make_ref()，仅一次即可
         call_stack.back()->locals.insert(module_path, module_obj);
         loaded_modules.insert(module_path, module_obj);
         return;
@@ -200,6 +204,8 @@ void Vm::exec_IMPORT(const Instruction& instruction) {
 
         {}
     });
+    new_frame->owner->make_ref();
+    new_frame->code_object->make_ref();
 
     size_t old_call_stack_size = call_stack.size();
     
@@ -248,6 +254,9 @@ void Vm::exec_IMPORT(const Instruction& instruction) {
             assert(module_name_str != nullptr);
             module_name = module_name_str->val;
         }
+        // attrs持有module_obj
+        module_obj->make_ref();
+
         local_object->attrs.insert("__owner_module__", module_obj);
         local_object->make_ref();
         module_obj->attrs.insert(name, local_object);
@@ -255,7 +264,6 @@ void Vm::exec_IMPORT(const Instruction& instruction) {
 
     call_stack.pop_back();
 
-    module_obj->make_ref();
     module_obj->path = module_path;
     call_stack.back()->locals.insert(module_name, module_obj);
 

@@ -29,8 +29,7 @@ void Vm::exec_MAKE_LIST(const Instruction& instruction) {
     std::vector<model::Object*> elem_list;
     elem_list.reserve(elem_count);  // 预分配空间，避免扩容
     for (size_t i = 0; i < elem_count; ++i) {
-        model::Object* elem = op_stack.top();
-        op_stack.pop();
+        model::Object* elem = fetch_one_from_stack_top();
 
         // 校验：元素不能为 nullptr
         if (elem == nullptr) {
@@ -47,8 +46,7 @@ void Vm::exec_MAKE_LIST(const Instruction& instruction) {
 
     // 创建 List 对象，压入栈
     auto* list_obj = new model::List(elem_list);
-    list_obj->make_ref();  // List 自身引用计std::to_string
-    op_stack.push(list_obj);
+    push_to_stack(list_obj);
 
     DEBUG_OUTPUT("make_list: 打包 " + std::to_string(elem_count) + " 个元素为 List，压栈成功");
 }
@@ -71,37 +69,41 @@ void Vm::exec_MAKE_DICT(const Instruction& instruction) {
     elem_list.reserve(elem_count);
 
     for (size_t i = 0; i < elem_count; ++i) {
-        // 弹出 value（栈顶第一个是 value）
-        model::Object* value = op_stack.top();
-        op_stack.pop();
+        model::Object* value = fetch_one_from_stack_top();
         if (!value) {
             throw NativeFuncError("DictMadeError", "Null value in dictionary entry");
         }
-        value->make_ref(); // 增加引用计数
+        value->make_ref();
 
-        // 弹出 key（栈顶第二个是 key）
         model::Object* key = fetch_one_from_stack_top();
+        key->make_ref();
 
-        key->make_ref(); // 增加引用计数
-
-        // 调用 __hash__ 方法获取哈希值
-        call_method(key, "__hash__", new model::List({}));
+        // 修使用create_list创建临时参数，保存指针以便释放
+        model::List* hash_args = model::cast_to_list(model::create_list({}));
+        call_method(key, "__hash__", hash_args);
         model::Object* hash_obj = fetch_one_from_stack_top();
 
-        // 检查哈希值类型
         auto* hashed_int = dynamic_cast<model::Int*>(hash_obj);
         if (!hashed_int) {
+            // 异常时提前释放临时对象，避免泄漏
+            // ==| IMPORTANT |==
+            hash_args->del_ref();
+            hash_obj->del_ref();
+            key->del_ref();
+            value->del_ref();
             instruction_throw("TypeError", "__hash__ must return an integer");
         }
         assert(hashed_int != nullptr);
 
         elem_list.emplace_back(hashed_int->val, std::pair{key, value});
+
+        // 释放临时参数和哈希对象
+        hash_args->del_ref();
+        hash_obj->del_ref();
     }
 
-    // 创建字典对象
     auto* dict_obj = new model::Dictionary(dep::Dict(elem_list));
-    dict_obj->make_ref();
-    op_stack.push(dict_obj);
+    push_to_stack(dict_obj);
 }
 
 // -------------------------- 跳转指令 --------------------------
@@ -125,8 +127,7 @@ void Vm::exec_JUMP_IF_FALSE(const Instruction& instruction) {
     if (instruction.opn_list.empty()) assert(false && "JUMP_IF_FALSE: 无目标pc");
 
     // 取出条件值
-    model::Object* cond = op_stack.top();
-    op_stack.pop();
+    model::Object* cond =fetch_one_from_stack_top();
     const size_t target_pc = instruction.opn_list[0];
 
     bool need_jump = is_true(cond) ? false: true;
@@ -143,13 +144,16 @@ void Vm::exec_JUMP_IF_FALSE(const Instruction& instruction) {
     } else {
         call_stack.back()->pc++;
     }
+    // ==| IMPORTANT |==
+    cond->del_ref();
 }
 
 
 void Vm::exec_CREATE_OBJECT(const Instruction& instruction) {
     auto obj = new model::Object();
+    obj->make_ref(); // 创建即计数
     obj->attrs.insert("__parent__", model::based_obj);
-    op_stack.emplace(obj);
+    push_to_stack(obj); // push自动make_ref()，计数变为2，栈释放后回到1
 }
 
 void Vm::exec_STOP(const Instruction& instruction) {
@@ -160,6 +164,7 @@ void Vm::exec_STOP(const Instruction& instruction) {
 void Vm::exec_CACHE_ITER(const Instruction& instruction) {
     assert(!op_stack.empty());
     auto iter = op_stack.top();
+    iter->make_ref();
     assert(iter != nullptr);
     assert(!call_stack.empty());
 
@@ -170,7 +175,7 @@ void Vm::exec_GET_ITER(const Instruction& instruction) {
     assert(!call_stack.empty());
     assert(!call_stack.back().get()->iters.empty());
 
-    op_stack.push(
+    push_to_stack(
         call_stack.back().get()->iters.back()
     );
 }
@@ -183,13 +188,14 @@ void Vm::exec_POP_ITER(const Instruction& instruction) {
 
 void Vm::exec_JUMP_IF_FINISH_ITER(const Instruction& instruction) {
     auto obj = fetch_one_from_stack_top();
-
     size_t target_pc = instruction.opn_list[0];
     if (obj == model::stop_iter_signal) {
         call_stack.back()->pc = target_pc;
+        obj->del_ref(); // 修复：释放使用后的obj
         return;
     }
     call_stack.back()->pc ++;
+    obj->del_ref(); // 修复：释放使用后的obj
 }
 
 }

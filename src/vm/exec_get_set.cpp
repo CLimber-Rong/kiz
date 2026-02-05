@@ -50,7 +50,7 @@ void Vm::exec_LOAD_VAR(const Instruction& instruction) {
         DEBUG_OUTPUT("var_name="+var_name);
         if (auto builtin_it = builtins.find(var_name)) {
             model::Object* builtin_val = builtin_it->value;
-            op_stack.push(builtin_val);
+            push_to_stack(builtin_val);
             return;
         }
         if (auto owner_module_it = call_stack.back()->owner->attrs.find("__owner_module__")) {
@@ -60,8 +60,7 @@ void Vm::exec_LOAD_VAR(const Instruction& instruction) {
             auto mod_var_it = owner_module->attrs.find(var_name);
             if (mod_var_it) {
                 model::Object* var_val = mod_var_it->value;
-                var_val->make_ref();
-                op_stack.push(var_val);
+                push_to_stack(var_val);
                 return;
             }
         }
@@ -73,8 +72,7 @@ void Vm::exec_LOAD_VAR(const Instruction& instruction) {
 
     model::Object* var_val = var_it->value;
     DEBUG_OUTPUT("load var: " + var_name + " = " + var_val->debug_string());
-    var_val->make_ref();
-    op_stack.push(var_val);
+    push_to_stack(var_val);
     DEBUG_OUTPUT("ok to exec load_var...");
 }
 
@@ -85,13 +83,11 @@ void Vm::exec_LOAD_CONST(const Instruction& instruction) {
     }
     size_t const_idx = instruction.opn_list[0];
     CallFrame* frame = call_stack.back().get();
-    if (const_idx >= frame->code_object->consts.size()) {
+    if (const_idx >= const_pool.size()) {
         assert(false && "LOAD_CONST: 常量索引超出范围");
     }
-    model::Object* const_val = frame->code_object->consts[const_idx];
-    DEBUG_OUTPUT("ok to get load const [" + std::to_string(const_idx) + "]: "+ const_val->debug_string());
-    const_val->make_ref();
-    op_stack.push(const_val);
+    model::Object* const_val = const_pool[const_idx];
+    push_to_stack(const_val);
 }
 
 void Vm::exec_SET_GLOBAL(const Instruction& instruction) {
@@ -107,11 +103,18 @@ void Vm::exec_SET_GLOBAL(const Instruction& instruction) {
     std::string var_name = call_stack.back()->code_object->names[name_idx];
 
     model::Object* var_val = fetch_one_from_stack_top();
-    var_val = model::copy_or_ref(var_val);
+    auto new_val = model::copy_or_ref(var_val); // 得到新对象
 
+    // 释放原有同名变量
     auto var_it = global_frame->locals.find(var_name);
+    if (var_it) {
+        // ==| IMPORTANT |==
+        var_it->value->del_ref();
+    }
 
-    global_frame->locals.insert(var_name, var_val);
+    global_frame->locals.insert(var_name, new_val);
+    // ==| IMPORTANT |==
+    var_val->del_ref();
 }
 
 void Vm::exec_SET_LOCAL(const Instruction& instruction) {
@@ -128,14 +131,24 @@ void Vm::exec_SET_LOCAL(const Instruction& instruction) {
     DEBUG_OUTPUT("ok to get var name: " + var_name);
 
     model::Object* var_val = fetch_one_from_stack_top();
-    var_val = model::copy_or_ref(var_val);
-    DEBUG_OUTPUT("var val: " + var_val->debug_string());
+    auto new_val = model::copy_or_ref(var_val);
+    DEBUG_OUTPUT("var val: " + new_val->debug_string());
 
+    // 检查原有同名变量，存在则释放引用
     auto var_it = curr_frame->locals.find(var_name);
+    if (var_it) {
+        // ==| IMPORTANT |==
+        var_it->value->del_ref();
+    }
 
-    curr_frame->locals.insert(var_name, var_val);
+    // 插入new_val，而非原var_val
+    curr_frame->locals.insert(var_name, new_val);
+    // ==| IMPORTANT |==
+    var_val->del_ref();
+
     DEBUG_OUTPUT("ok to set_local...");
     DEBUG_OUTPUT("current local at [" + std::to_string(call_stack.size()) + "] " +  curr_frame->locals.to_string());
+
 }
 
 void Vm::exec_SET_NONLOCAL(const Instruction& instruction) {
@@ -164,9 +177,19 @@ void Vm::exec_SET_NONLOCAL(const Instruction& instruction) {
     }
 
     model::Object* var_val = fetch_one_from_stack_top();
-    var_val = model::copy_or_ref(var_val);
+    auto new_val = model::copy_or_ref(var_val);
 
-    target_frame->locals.insert(var_name, var_val);
+    // 释放原有同名变量
+    auto old_it = target_frame->locals.find(var_name);
+    if (old_it) {
+        // ==| IMPORTANT |==
+        old_it->value->del_ref();
+    }
+
+    //插入new_val
+    target_frame->locals.insert(var_name, new_val);
+    // ==| IMPORTANT |==
+    var_val->del_ref();
 }
 
 // -------------------------- 属性访问 --------------------------
@@ -175,8 +198,7 @@ void Vm::exec_GET_ATTR(const Instruction& instruction) {
     if (op_stack.empty() || instruction.opn_list.empty()) {
         assert(false && "GET_ATTR: 操作数栈为空或无属性名索引");
     }
-    model::Object* obj = op_stack.top();
-    op_stack.pop();
+    model::Object* obj = fetch_one_from_stack_top();
     size_t name_idx = instruction.opn_list[0];
     CallFrame* curr_frame = call_stack.back().get();
 
@@ -189,7 +211,7 @@ void Vm::exec_GET_ATTR(const Instruction& instruction) {
 
     model::Object* attr_val = get_attr(obj, attr_name);
     DEBUG_OUTPUT("attr val: " + attr_val->debug_string());
-    op_stack.push(attr_val);
+    push_to_stack(attr_val);
 }
 
 void Vm::exec_SET_ATTR(const Instruction& instruction) {
@@ -199,6 +221,7 @@ void Vm::exec_SET_ATTR(const Instruction& instruction) {
     }
     model::Object* attr_val = fetch_one_from_stack_top();
     attr_val = model::copy_or_ref(attr_val);
+
     model::Object* obj = fetch_one_from_stack_top();
     size_t name_idx = instruction.opn_list[0];
     CallFrame* curr_frame = call_stack.back().get();
@@ -206,21 +229,28 @@ void Vm::exec_SET_ATTR(const Instruction& instruction) {
     if (name_idx >= curr_frame->code_object->names.size()) {
         assert(false && "SET_ATTR: 属性名索引超出范围");
     }
-    std::string attr_name = curr_frame->code_object->names[name_idx];
+    const std::string attr_name = curr_frame->code_object->names[name_idx];
 
+    // 检查原有同名属性，存在则释放引用
     auto attr_it = obj->attrs.find(attr_name);
+    if (attr_it) {
+        // ==| IMPORTANT |==
+        attr_it->value->del_ref();
+    }
 
-    attr_val->make_ref();
     obj->attrs.insert(attr_name, attr_val);
+    // ==| IMPORTANT |==
+    attr_val->del_ref();
 }
 
 void Vm::exec_GET_ITEM(const Instruction& instruction) {
     model::Object* obj = fetch_one_from_stack_top();
-
     auto args_list = dynamic_cast<model::List*>(fetch_one_from_stack_top());
     assert(args_list != nullptr);
 
     handle_call(get_attr(obj, "__getitem__"), args_list, obj);
+    // ==| IMPORTANT |==
+    args_list->del_ref(); // 修复：释放使用后的args_list
 }
 
 void Vm::exec_SET_ITEM(const Instruction& instruction) {
@@ -230,8 +260,18 @@ void Vm::exec_SET_ITEM(const Instruction& instruction) {
 
     // 获取对象自身的 __setitem__
     model::Object* setitem_method = get_attr(obj, "__setitem__");
+    setitem_method->make_ref(); // 临时持有方法对象
 
-    handle_call(setitem_method, new model::List({arg, value}), obj);
+    // 使用create_list创建参数列表，自动make_ref()，元素也会被处理
+    std::vector args_vec = {arg, value};
+    model::List* args_list = model::cast_to_list(model::create_list(args_vec));
+
+    handle_call(setitem_method, args_list, obj);
+
+    // 释放所有临时对象
+    // ==| IMPORTANT |==
+    setitem_method->del_ref();
+    args_list->del_ref();
 }
 
 }
