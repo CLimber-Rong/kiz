@@ -109,7 +109,7 @@ void Lexer::read_fstring() {
     dep::UTF8Char prefix = src_[char_pos_]; // 'f' 或 'F'
     next(); // 消费 'f' 或 'F'
 
-    dep::UTF8Char quote_char = src_[char_pos_]; // 引号
+    dep::UTF8Char quote_char = src_[char_pos_]; // 外部f-string的引号
     next(); // 消费引号
 
     // 生成 FStringStart token
@@ -123,12 +123,43 @@ void Lexer::read_fstring() {
     size_t expr_start_lno = 0;
     size_t expr_start_col = 0;
     int brace_depth = 0;
+    bool in_string = false;        // 标记是否在表达式内的字符串中
+    dep::UTF8Char string_quote;    // 表达式内字符串的引号类型
+    bool escape_next = false;      // 标记下一个字符是否转义
 
     while (char_pos_ < src_.size()) {
         dep::UTF8Char c = src_[char_pos_];
 
-        // 检查是否结束引号
-        if (c == quote_char) {
+        // 如果在表达式内的字符串中
+        if (in_expr && in_string) {
+            if (escape_next) {
+                // 转义字符，跳过
+                escape_next = false;
+                next();
+                continue;
+            }
+
+            if (c == '\\') {
+                // 遇到转义符
+                escape_next = true;
+                next();
+                continue;
+            }
+
+            if (c == string_quote) {
+                // 字符串结束
+                in_string = false;
+                next();
+                continue;
+            }
+
+            // 字符串内容，正常消费
+            next();
+            continue;
+        }
+
+        // 检查是否结束外部f-string
+        if (c == quote_char && !in_expr) {
             // 生成 FStringEnd token
             size_t end_char = char_pos_;
             emit_token(TokenType::FStringEnd, end_char, end_char + 1,
@@ -137,7 +168,7 @@ void Lexer::read_fstring() {
             break;
         }
 
-        // 处理转义字符（仅在表达式外部）
+        // 处理转义字符（仅在表达式外部且不在字符串中）
         if (c == '\\' && char_pos_ + 1 < src_.size() && !in_expr) {
             // 直接跳过转义序列，不生成token
             next(); // 跳过反斜杠
@@ -165,40 +196,49 @@ void Lexer::read_fstring() {
         }
 
         // 检查是否结束表达式
-        if (c == '}' && in_expr) {
-            // 首先提取表达式内容
-            if (brace_depth == 1) {
-                // 生成表达式标识符token
-                if (expr_start_char < char_pos_) { // 表达式不为空
-                    std::string expr_text;
-                    for (size_t i = expr_start_char; i < char_pos_; i++) {
-                        expr_text += src_[i].to_string();
-                    }
-
-                    // 生成 Identifier token
-                    emit_token(TokenType::Identifier, expr_start_char, char_pos_,
-                               expr_start_lno, expr_start_col, lineno_, col_ - 1);
+        if (c == '}' && in_expr && brace_depth == 1 && !in_string) {
+            // 生成表达式标识符token
+            if (expr_start_char < char_pos_) { // 表达式不为空
+                std::string expr_text;
+                for (size_t i = expr_start_char; i < char_pos_; i++) {
+                    expr_text += src_[i].to_string();
                 }
 
-                // 生成 InsertExprEnd token
-                size_t expr_end = char_pos_;
-                emit_token(TokenType::InsertExprEnd, expr_end, expr_end + 1,
-                           lineno_, col_, lineno_, col_);
-                next(); // 消费 '}'
-
-                in_expr = false;
-                brace_depth = 0;
-            } else {
-                // 嵌套的 '}'，减少深度
-                brace_depth--;
-                next(); // 继续消费
+                // 生成 Identifier token
+                emit_token(TokenType::Identifier, expr_start_char, char_pos_,
+                           expr_start_lno, expr_start_col, lineno_, col_ - 1);
             }
+
+            // 生成 InsertExprEnd token
+            size_t expr_end = char_pos_;
+            emit_token(TokenType::InsertExprEnd, expr_end, expr_end + 1,
+                       lineno_, col_, lineno_, col_);
+            next(); // 消费 '}'
+
+            in_expr = false;
+            brace_depth = 0;
+            continue;
+        }
+
+        // 处理表达式内的字符串引号
+        if (in_expr && (c == '"' || c == '\'')) {
+            // 进入表达式内的字符串
+            in_string = true;
+            string_quote = c;
+            next(); // 消费引号
             continue;
         }
 
         // 处理表达式内的嵌套 '{'
         if (c == '{' && in_expr) {
             brace_depth++;
+            next();
+            continue;
+        }
+
+        // 处理表达式内的嵌套 '}'
+        if (c == '}' && in_expr) {
+            brace_depth--;
             next();
             continue;
         }
@@ -229,7 +269,7 @@ void Lexer::read_fstring() {
                            str_start_lno, str_start_col, lineno_, col_ - 1);
             }
         } else {
-            // 在表达式中，继续读取
+            // 在表达式中（不在字符串中），继续读取
             next();
         }
     }
