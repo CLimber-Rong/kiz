@@ -53,19 +53,6 @@ void Vm::instruction_throw(const std::string& name, const std::string& content) 
     handle_throw();
 }
 
-
-// 辅助函数
-std::pair<std::string, std::string> get_err_name_and_msg(const model::Object* err_obj) {
-    assert(err_obj != nullptr);
-    auto err_name_it = err_obj->attrs.find("__name__");
-    auto err_msg_it = err_obj->attrs.find("__msg__");
-    assert(err_name_it != nullptr);
-    assert(err_msg_it != nullptr);
-    auto err_name = Vm::obj_to_str(err_name_it->value);
-    auto err_msg = Vm::obj_to_str(err_msg_it->value);
-    return {err_name, err_msg};
-}
-
 void Vm::exec_ENTER_TRY(const Instruction& instruction) {
     assert(!call_stack.empty() && "exec_ENTER_TRY: 调用栈为空，无法执行ENTER_TRY指令");
     size_t catch_start = instruction.opn_list[0];
@@ -167,14 +154,20 @@ void Vm::handle_throw() {
         return;
     }
 
-    auto [error_name, error_msg] = get_err_name_and_msg(curr_error);
+    auto err_name_it = curr_error->attrs.find("__name__");
+    auto err_msg_it = curr_error->attrs.find("__msg__");
+    if (!err_name_it or !err_msg_it) {
+        throw NativeFuncError("NameError",
+        "Undefined attribute '__name__' '__msg__'  of " + curr_error->debug_string() + " (when try to throw it)"
+        );
+    }
+    auto error_name = obj_to_str(err_name_it->value);
+    auto error_msg = obj_to_str(err_msg_it->value);
 
     // 报错
     if (auto err_obj = dynamic_cast<model::Error*>(curr_error)) {
         std::cout << Color::BRIGHT_RED << "\nTrace Back: " << Color::RESET << std::endl;
         for (auto& [_path, _pos]: err_obj->positions ) {
-            DEBUG_OUTPUT(_path + " " + std::to_string(_pos.lno_start) + " "
-                + std::to_string(_pos.lno_end) + " " + std::to_string(_pos.col_start) + " " + std::to_string(_pos.col_end));
             err::context_printer(_path, _pos);
         }
     }

@@ -179,8 +179,6 @@ void Vm::entry_builtins() {
         auto err = new model::Error(gen_pos_info());
         err->attrs_insert("__name__", err_name);
         err->attrs_insert("__msg__", err_msg);
-        // std::cout << std::format("throw Err pos f{} c{} l{}",
-        //             err->positions.back().first, err->positions.back().second.col_start, err->positions.back().second.lno_start) << std::endl;
         return err;
     }));
 

@@ -1,3 +1,5 @@
+#include <format>
+
 #include "../../src/models/models.hpp"
 #include "include/builtin_functions.hpp"
 
@@ -282,9 +284,10 @@ Object* list_setitem(Object* self, const List* args) {
     auto value_obj = args->val[1];
 
     if (index < self_list->val.size()) {
-        self_list->val[index] = value_obj;;
+        self_list->val[index] = value_obj;
+        return load_nil();
     }
-    assert(false);
+    throw NativeFuncError("SetItemError", std::format("index {} out of range", index));
 }
 
 Object* list_getitem(Object* self, const List* args) {
@@ -296,7 +299,7 @@ Object* list_getitem(Object* self, const List* args) {
     if (index < self_list->val.size()) {
         return self_list->val[index];
     }
-    assert(false);
+    throw NativeFuncError("GetItemError", std::format("index {} out of range", index));
 }
 
 Object* list_count(Object* self, const List* args) {
