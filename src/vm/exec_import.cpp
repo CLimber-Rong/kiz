@@ -15,6 +15,7 @@
 #include <string>
 #include <stdexcept>
 #include <cstddef>
+#include <array>
 #include <format>
 
 // 跨平台兼容：处理Windows/Linux/macOS的编译差异
@@ -155,7 +156,7 @@ void Vm::handle_import(const std::string& module_path) {
 
     bool file_in_path = false;
     fs::path actually_found_path = "";
-    std::array for_search_paths = {
+    std::vector for_search_paths = {
         get_exe_abs_dir() / current_file_path.parent_path() / fs::path(module_path),
         get_exe_abs_dir() / fs::path(module_path)
     };
@@ -170,6 +171,7 @@ void Vm::handle_import(const std::string& module_path) {
         }
     }
 #endif
+
 
     if (file_in_path) {
 #ifdef __EMSCRIPTEN__

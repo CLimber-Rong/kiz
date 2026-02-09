@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 #include "repl/color.hpp"
-#include "../cmake-build-debug/include/version.hpp"
+#include "version.hpp"
 
 // 调试模式开关
 #define IN_DEBUG
